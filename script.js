@@ -1,6 +1,6 @@
 /**
  * Основной скрипт управления интерфейсом генератора карточек Русского Лотто
- * Версия: 1.1.0 (усиленная проверка зависимостей и ошибок)
+ * Версия: 1.2.0 (улучшенная валидация, обработка ошибок и UX)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -117,8 +117,8 @@ function handleUnsupportedBrowser(btn) {
   supportInfo.id = 'supportInfo';
   supportInfo.style.cssText = `
     color: red;
-    marginTop: 10px;
-    fontStyle: italic;
+    margin-top: 10px;
+    font-style: italic;
     padding: 8px;
     background-color: #fff3cd;
     border: 1px solid #ffeaa7;
@@ -151,6 +151,7 @@ function initStatusDisplay() {
     text-align: center;
     font-weight: bold;
     transition: background-color 0.3s, color 0.3s;
+    display: none; /* Скрываем по умолчанию */
   `;
   console.log('Элемент статуса инициализирован');
 }
@@ -158,7 +159,7 @@ function initStatusDisplay() {
 /**
  * Показывает сообщение статуса с указанием типа
  * @param {string} message — текст сообщения
- * @param {string} type — тип сообщения ('success', 'error', 'info')
+ * @param {string} type — тип сообщения ('success', 'error', 'warning', 'info')
  */
 function showStatus(message, type = 'info') {
   const statusDiv = document.getElementById('status');
@@ -190,6 +191,7 @@ function showStatus(message, type = 'info') {
   statusDiv.textContent = icon + message;
   statusDiv.style.backgroundColor = bgColor;
   statusDiv.style.color = textColor;
+  statusDiv.style.display = 'block'; // Показываем элемент
 
   console.log(`Статус установлен: "${message}" (тип: ${type})`);
 
@@ -199,6 +201,7 @@ function showStatus(message, type = 'info') {
       statusDiv.textContent = '';
       statusDiv.style.backgroundColor = '';
       statusDiv.style.color = '';
+      statusDiv.style.display = 'none'; // Скрываем элемент
       console.log('Статус очищен автоматически');
     }
   }, 6000); // 6 секунд
@@ -231,19 +234,19 @@ function validateInputs() {
     console.warn('Некорректное количество страниц:', inputs.pageCount);
   }
   if (isNaN(inputs.fontSize) || inputs.fontSize < 16 || inputs.fontSize > 36) {
-    errors.push('Размер шрифта чисел должен быть числом от 16 до 36 pt');
+    errors.push('Размер шрифта чисел должен быть числом от 16 до 36 pt');
     console.warn('Некорректный размер шрифта:', inputs.fontSize);
   }
   if (isNaN(inputs.outerBorder) || inputs.outerBorder < 1 || inputs.outerBorder > 10) {
-    errors.push('Толщина внешней рамки должна быть числом от 1 до 10 px');
+    errors.push('Толщина внешней рамки должна быть числом от 1 до 10 px');
     console.warn('Некорректная толщина внешней рамки:', inputs.outerBorder);
   }
   if (isNaN(inputs.innerBorder) || inputs.innerBorder < 1 || inputs.innerBorder > 5) {
-    errors.push('Толщина внутренней рамки должна быть числом от 1 до 5 px');
+    errors.push('Толщина внутренней рамки должна быть числом от 1 до 5 px');
     console.warn('Некорректная толщина внутренней рамки:', inputs.innerBorder);
   }
   if (isNaN(inputs.borderSpacing) || inputs.borderSpacing < 0 || inputs.borderSpacing > 20) {
-    errors.push('Расстояние между рамками должно быть числом от 0 до 20 px');
+    errors.push('Расстояние между рамками должно быть числом от 0 до 20 px');
     console.warn('Некорректное расстояние между рамками:', inputs.borderSpacing);
   }
   if (isNaN(inputs.cardWidthTenths) || inputs.cardWidthTenths < 1060 || inputs.cardWidthTenths > 2120) {
@@ -254,31 +257,37 @@ function validateInputs() {
     errors.push('Высота карточки (в десятых мм) должна быть числом от 350 до 1060');
     console.warn('Некорректная высота карточки:', inputs.cardHeightTenths);
   }
-  if (isNaN(inputs.verticalSpacing) || inputs.verticalSpacing < 0 || inputs.verticalSpacing > 100) {
-    errors.push('Вертикальное расстояние должно быть числом от 0 до 100 pt');
+  if (isNaN(inputs.verticalSpacing) || inputs.verticalSpacing < 7 || inputs.verticalSpacing > 150) {
+    errors.push('Вертикальное расстояние должно быть числом от 7 до 150 pt');
     console.warn('Некорректное вертикальное расстояние:', inputs.verticalSpacing);
   }
-  if (isNaN(inputs.dateTimeFontSize) || inputs.dateTimeFontSize < 2 || inputs.dateTimeFontSize > 12) {
-    errors.push('Размер шрифта даты/времени должен быть числом от 2 до 12 pt');
+  if (isNaN(inputs.dateTimeFontSize) || inputs.dateTimeFontSize < 1 || inputs.dateTimeFontSize > 20) {
+    errors.push('Размер шрифта даты/времени должен быть числом от 1 до 20 pt');
     console.warn('Некорректный размер шрифта даты/времени:', inputs.dateTimeFontSize);
   }
   if (isNaN(inputs.numberFontSize) || inputs.numberFontSize < 8 || inputs.numberFontSize > 36) {
-    errors.push('Размер шрифта номеров должен быть числом от 8 до 36 pt');
+    errors.push('Размер шрифта номеров должен быть числом от 8 до 36 pt');
     console.warn('Некорректный размер шрифта номеров:', inputs.numberFontSize);
   }
-  if (isNaN(inputs.footerMargin) || inputs.footerMargin < 0 || inputs.footerMargin > 50) {
-    errors.push('Отступ нижнего колонтитула должен быть числом от 0 до 50 pt');
+  if (isNaN(inputs.footerMargin) || inputs.footerMargin < -50 || inputs.footerMargin > 50) {
+    errors.push('Отступ нижнего колонтитула должен быть числом от −50 до 50 pt');
     console.warn('Некорректный отступ нижнего колонтитула:', inputs.footerMargin);
   }
 
   // Проверка шрифта
   const fontFamily = document.getElementById('fontFamily').value.trim();
+  const supportedFonts = ['Helvetica', 'HelveticaBold', 'Helvetica-Oblique', 'Helvetica-BoldOblique'];
   if (!fontFamily) {
     errors.push('Обязательно выберите шрифт для карточек');
     console.warn('Шрифт не выбран');
-  } else if (!['Helvetica', 'Arial', 'Times New Roman', 'Courier'].includes(fontFamily)) {
-    errors.push('Поддерживаются только шрифты: Helvetica, Arial, Times New Roman, Courier');
+  } else if (!supportedFonts.includes(fontFamily)) {
+    errors.push(`Поддерживаются только шрифты: ${supportedFonts.join(', ')}`);
     console.warn('Неподдерживаемый шрифт:', fontFamily);
+  }
+
+  // Подсветка некорректных полей в интерфейсе
+  if (errors.length > 0) {
+    highlightInvalidFields(errors);
   }
 
   // Если есть ошибки — показываем их пользователю
@@ -289,5 +298,244 @@ function validateInputs() {
   }
 
   console.log('Все входные данные прошли валидацию');
+  return true;
+}
+
+/**
+ * Подсвечивает некорректные поля в интерфейсе
+ * @param {string[]} errors — массив сообщений об ошибках
+ */
+function highlightInvalidFields(errors) {
+  // Сбрасываем подсветку всех полей
+  const controlGroups = document.querySelectorAll('.control-group');
+  controlGroups.forEach(group => {
+    group.style.border = '';
+    group.style.boxShadow = '';
+  });
+
+  // Определяем, какие поля вызвали ошибки
+  const errorFields = [];
+  if (errors.some(err => err.includes('Количество страниц'))) {
+    errorFields.push('pageCount');
+  }
+  if (errors.some(err => err.includes('Размер шрифта чисел'))) {
+    errorFields.push('fontSize');
+  }
+  if (errors.some(err => err.includes('Толщина внешней рамки'))) {
+    errorFields.push('outerBorder');
+  }
+  if (errors.some(err => err.includes('Толщина внутренней рамки'))) {
+    errorFields.push('innerBorder');
+  }
+  if (errors.some(err => err.includes('Расстояние между рамками'))) {
+    errorFields.push('borderSpacing');
+  }
+  if (errors.some(err => err.includes('Ширина карточки'))) {
+    errorFields.push('cardWidthTenths');
+  }
+  if (errors.some(err => err.includes('Высота карточки'))) {
+    errorFields.push('cardHeightTenths');
+  }
+  if (errors.some(err => err.includes('Вертикальное расстояние'))) {
+    errorFields.push('verticalSpacing');
+  }
+  if (errors.some(err => err.includes('Размер шрифта даты/времени'))) {
+    errorFields.push('dateTimeFontSize');
+  }
+  if (errors.some(err => err.includes('Размер шрифта номеров'))) {
+    errorFields.push('numberFontSize');
+  }
+  if (errors.some(err => err.includes('Отступ нижнего колонтитула'))) {
+    errorFields.push('footerMargin');
+  }
+    if (errors.some(err => err.includes('Обязательно выберите шрифт'))) {
+    errorFields.push('fontFamily');
+  }
+
+  // Подсвечиваем проблемные поля красной рамкой
+  errorFields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+      const controlGroup = field.closest('.control-group');
+      if (controlGroup) {
+        controlGroup.style.border = '2px solid #dc3545';
+        controlGroup.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
+        controlGroup.style.transition = 'border 0.3s, box-shadow 0.3s';
+      }
+      // Дополнительно подсвечиваем сам элемент ввода
+      field.style.borderColor = '#dc3545';
+      field.style.backgroundColor = '#fff5f5';
+    }
+  });
+
+  // Автоматически убираем подсветку через 8 секунд
+  setTimeout(() => {
+    errorFields.forEach(fieldId => {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        const controlGroup = field.closest('.control-group');
+        if (controlGroup) {
+          controlGroup.style.border = '';
+          controlGroup.style.boxShadow = '';
+        }
+        field.style.borderColor = '';
+        field.style.backgroundColor = '';
+      }
+    });
+  }, 8000);
+}
+
+/**
+ * Сбрасывает подсветку всех полей формы
+ */
+function resetFieldHighlights() {
+  const controlGroups = document.querySelectorAll('.control-group');
+  controlGroups.forEach(group => {
+    group.style.border = '';
+    group.style.boxShadow = '';
+  });
+
+  const inputFields = document.querySelectorAll('input, select');
+  inputFields.forEach(field => {
+    field.style.borderColor = '';
+    field.style.backgroundColor = '';
+  });
+}
+
+/**
+ * Обработчик изменения полей формы — сбрасывает подсветку при редактировании
+ */
+function setupFieldChangeHandlers() {
+  const inputFields = document.querySelectorAll('#controls input, #controls select');
+  inputFields.forEach(field => {
+    field.addEventListener('input', resetFieldHighlights);
+    field.addEventListener('change', resetFieldHighlights);
+  });
+}
+
+// Инициализация обработчиков изменений полей формы после загрузки DOM
+document.addEventListener('DOMContentLoaded', () => {
+  setupFieldChangeHandlers();
+  console.log('Обработчики изменений полей формы инициализированы');
+});
+
+/**
+ * Функция для быстрой проверки корректности одного поля
+ * @param {string} fieldId — ID поля формы
+ * @param {number} value — значение для проверки
+ * @param {number} min — минимальное допустимое значение
+ * @param {number} max — максимальное допустимое значение
+ * @param {string} errorMessage — сообщение об ошибке
+ * @returns {string|null} — сообщение об ошибке или null, если всё корректно
+ */
+function validateField(fieldId, value, min, max, errorMessage) {
+  if (isNaN(value) || value < min || value > max) {
+    return errorMessage;
+  }
+  return null;
+}
+
+/**
+ * Универсальная функция валидации с использованием validateField
+ * @returns {boolean} — true, если все данные корректны
+ */
+function validateInputsUniversal() {
+  const validationRules = [
+    {
+      field: 'pageCount',
+      min: 1,
+      max: 100,
+      message: 'Количество страниц должно быть числом от 1 до 100'
+    },
+    {
+      field: 'fontSize',
+      min: 16,
+      max: 36,
+      message: 'Размер шрифта чисел должен быть числом от 16 до 36 pt'
+    },
+    {
+      field: 'outerBorder',
+      min: 1,
+      max: 10,
+      message: 'Толщина внешней рамки должна быть числом от 1 до 10 px'
+    },
+    {
+      field: 'innerBorder',
+      min: 1,
+      max: 5,
+      message: 'Толщина внутренней рамки должна быть числом от 1 до 5 px'
+    },
+    {
+      field: 'borderSpacing',
+      min: 0,
+      max: 20,
+      message: 'Расстояние между рамками должно быть числом от 0 до 20 px'
+    },
+    {
+      field: 'cardWidthTenths',
+      min: 1060,
+      max: 2120,
+      message: 'Ширина карточки (в десятых мм) должна быть числом от 1060 до 2120'
+    },
+    {
+      field: 'cardHeightTenths',
+      min: 350,
+      max: 1060,
+      message: 'Высота карточки (в десятых мм) должна быть числом от 350 до 1060'
+    },
+    {
+      field: 'verticalSpacing',
+      min: 7,
+      max: 150,
+      message: 'Вертикальное расстояние должно быть числом от 7 до 150 pt'
+    },
+    {
+      field: 'dateTimeFontSize',
+      min: 1,
+      max: 20,
+      message: 'Размер шрифта даты/времени должен быть числом от 1 до 20 pt'
+    },
+    {
+      field: 'numberFontSize',
+      min: 8,
+      max: 36,
+      message: 'Размер шрифта номеров должен быть числом от 8 до 36 pt'
+    },
+    {
+      field: 'footerMargin',
+      min: -50,
+      max: 50,
+      message: 'Отступ нижнего колонтитула должен быть числом от −50 до 50 pt'
+    }
+  ];
+
+  const errors = [];
+
+  validationRules.forEach(rule => {
+    const value = parseInt(document.getElementById(rule.field).value, 10);
+    const error = validateField(rule.field, value, rule.min, rule.max, rule.message);
+    if (error) {
+      errors.push(error);
+      console.warn(error);
+    }
+  });
+
+  // Проверка шрифта
+  const fontFamily = document.getElementById('fontFamily').value.trim();
+  const supportedFonts = ['Helvetica', 'HelveticaBold', 'Helvetica-Oblique', 'Helvetica-BoldOblique'];
+  if (!fontFamily) {
+    errors.push('Обязательно выберите шрифт для карточек');
+    console.warn('Шрифт не выбран');
+  } else if (!supportedFonts.includes(fontFamily)) {
+    errors.push(`Поддерживаются только шрифты: ${supportedFonts.join(', ')}`);
+    console.warn('Неподдерживаемый шрифт:', fontFamily);
+  }
+
+  if (errors.length > 0) {
+    highlightInvalidFields(errors);
+    showStatus('Ошибки в настройках: ' + errors.join('; '), 'error');
+    return false;
+  }
+
   return true;
 }
