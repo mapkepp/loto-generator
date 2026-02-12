@@ -5,6 +5,7 @@ class PDFGenerator {
   constructor() {
     this.DOWNLOAD_TIMEOUT = 2000; // мс — время мониторинга скачивания
     this.CLEANUP_DELAY = 1000;  // мс — задержка на очистку
+    console.log('PDFGenerator инициализирован');
   }
 
   async generatePDF() {
@@ -62,7 +63,7 @@ class PDFGenerator {
       { name: 'PDFLib', condition: typeof PDFLib !== 'undefined' }
     ];
 
-    const failedChecks = checks.filter(check => !check.condition);
+        const failedChecks = checks.filter(check => !check.condition);
     if (failedChecks.length > 0) {
       failedChecks.forEach(check => console.error(`${check.name} не поддерживается`));
       return false;
@@ -72,50 +73,69 @@ class PDFGenerator {
   }
 
   getConfig() {
-    return {
-      pageCount: parseInt(document.getElementById('pageCount').value),
-      fontSize: parseInt(document.getElementById('fontSize').value),
-      outerBorder: parseInt(document.getElementById('outerBorder').value),
-      innerBorder: parseInt(document.getElementById('innerBorder').value),
-      borderSpacing: parseInt(document.getElementById('borderSpacing').value),
-      cardWidth: Math.round(parseInt(document.getElementById('cardWidthTenths').value) * 0.283464567),
-      cardHeight: Math.round(parseInt(document.getElementById('cardHeightTenths').value) * 0.283464567),
-      verticalSpacing: parseInt(document.getElementById('verticalSpacing').value),
-      dateTimeFontSize: parseInt(document.getElementById('dateTimeFontSize').value),
-      numberFontSize: parseInt(document.getElementById('numberFontSize').value),
-      footerMargin: parseInt(document.getElementById('footerMargin').value)
+    const config = {
+      pageCount: utils.safeToNumber(document.getElementById('pageCount').value, 6),
+      fontSize: utils.safeToNumber(document.getElementById('fontSize').value, 30),
+      outerBorder: utils.safeToNumber(document.getElementById('outerBorder').value, 4),
+      innerBorder: utils.safeToNumber(document.getElementById('innerBorder').value, 2),
+      borderSpacing: utils.safeToNumber(document.getElementById('borderSpacing').value, 3),
+      cardWidth: utils.convertTenthsMmToPt(
+        utils.safeToNumber(document.getElementById('cardWidthTenths').value, 1965)
+      ),
+      cardHeight: utils.convertTenthsMmToPt(
+        utils.safeToNumber(document.getElementById('cardHeightTenths').value, 657)
+      ),
+      verticalSpacing: utils.safeToNumber(document.getElementById('verticalSpacing').value, 20),
+      dateTimeFontSize: utils.safeToNumber(document.getElementById('dateTimeFontSize').value, 3),
+      numberFontSize: utils.safeToNumber(document.getElementById('numberFontSize').value, 4),
+      footerMargin: utils.safeToNumber(document.getElementById('footerMargin').value, 5),
+      fontFamily: document.getElementById('fontFamily').value
     };
+
+    console.log('Конфигурация получена и обработана:', config);
+    return config;
   }
 
   async loadFont(pdfDoc, fontFamily) {
-    switch (fontFamily) {
-      case 'Helvetica':
-        return await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-      case 'HelveticaBold':
-        return await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
-      case 'Helvetica-Oblique':
-        return await pdfDoc.embedFont(PDFLib.StandardFonts['Helvetica-Oblique']);
-      case 'Helvetica-BoldOblique':
-        return await pdfDoc.embedFont(PDFLib.StandardFonts['Helvetica-BoldOblique']);
-      default:
-        return await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+    console.log(`Загрузка шрифта: ${fontFamily}`);
+    try {
+      switch (fontFamily) {
+        case 'Helvetica':
+          return await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+        case 'HelveticaBold':
+          return await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+        case 'Helvetica-Oblique':
+          return await pdfDoc.embedFont(PDFLib.StandardFonts['Helvetica-Oblique']);
+        case 'Helvetica-BoldOblique':
+          return await pdfDoc.embedFont(PDFLib.StandardFonts['Helvetica-BoldOblique']);
+        default:
+          console.warn(`Шрифт ${fontFamily} не найден, используем Helvetica по умолчанию`);
+          return await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки шрифта:', error);
+      throw error;
     }
   }
 
   calculateCardsPerPage(config) {
     const pageHeight = 842; // A4 высота в pt
     const availableHeight = pageHeight - 0; // отступы сверху/снизу
-    return Math.floor(availableHeight / (config.cardHeight + config.verticalSpacing));
+    const cardsPerPage = Math.floor(availableHeight / (config.cardHeight + config.verticalSpacing));
+    console.log(`Карточек на странице рассчитано: ${cardsPerPage}`);
+    return cardsPerPage;
   }
 
   calculateCardPosition(page, rowIndex, config) {
     const pageHeight = page.getSize().height;
     const cardY = pageHeight - (rowIndex + 1) * (config.cardHeight + config.verticalSpacing) - 0;
     const cardX = (page.getSize().width - config.cardWidth) / 2;
+    console.log(`Позиция карточки [${rowIndex}]: x=${cardX}, y=${cardY}`);
     return { cardX, cardY };
   }
 
   generateLotoCard() {
+    console.log('Генерация новой карточки лото...');
     const card = [Array(9).fill(0), Array(9).fill(0), Array(9).fill(0)];
     const columnRanges = [
       [1, 9], [10, 19], [20, 29], [30, 39], [40, 49],
@@ -127,7 +147,7 @@ class PDFGenerator {
       for (let col = 0; col < 9; col++) {
         const [min, max] = columnRanges[col];
         const numbersInColumn = Array.from(
-          ({ length: max - min + 1 },
+          { length: max - min + 1 },
           (_, i) => i + min
         );
         const numCount = Math.floor(Math.random() * 2) + 1;
@@ -147,12 +167,19 @@ class PDFGenerator {
         }
       }
       const isValid = tempCard.every(row => row.filter(n => n !== 0).length === 5);
-      return isValid ? tempCard : generateValidCard();
+      if (isValid) {
+        console.log('Карточка сгенерирована успешно');
+        return tempCard;
+      } else {
+        console.warn('Сгенерированная карточка невалидна, повторяем попытку...');
+        return generateValidCard();
+      }
     };
     return generateValidCard();
   }
 
   drawCard(page, card, x, y, config, font, cardNumber) {
+    console.log(`Начало отрисовки карточки №${cardNumber} в позиции (${x}, ${y})`);
     const blackColor = PDFLib.rgb(0, 0, 0);
     const cellWidth = config.cardWidth / 9;
     const cellHeight = config.cardHeight / 3;
@@ -160,14 +187,13 @@ class PDFGenerator {
     // Рисуем двойную рамку карточки
     this.drawDoubleBorder(page, x, y, config.cardWidth, config.cardHeight,
       config.outerBorder, config.innerBorder, config.borderSpacing, blackColor);
-    console.log('Двойная рамка нарисована');
 
     // Рисуем ячейки и числа
     for (let rowIndex = 0; rowIndex < 3; rowIndex++) {
       for (let colIndex = 0; colIndex < 9; colIndex++) {
         const num = card[rowIndex][colIndex];
 
-                // Центр ячейки
+        // Центр ячейки
         const xCenter = x + colIndex * cellWidth + cellWidth / 2;
         const yCenter = y + (2 - rowIndex) * cellHeight + cellHeight / 2;
 
@@ -184,9 +210,9 @@ class PDFGenerator {
         if (num !== 0) {
           const text = num.toString();
           const textWidth = font.widthOfTextAtSize(text, config.fontSize);
-          const x = xCenter - textWidth / 2;
+          const drawX = xCenter - textWidth / 2;
 
-          // Адаптивный вертикальный сдвиг в зависимости от размера шрифта
+          // Адаптивный вертикальный сдвиг
           let k;
           if (config.fontSize <= 22) {
             k = 0.35;
@@ -195,168 +221,159 @@ class PDFGenerator {
           } else {
             k = 0.30 - (config.fontSize - 28) * (0.05 / 8);
           }
-
-          const y = yCenter - config.fontSize * k;
+          const drawY = yCenter - config.fontSize * k;
 
           page.drawText(text, {
-            x: x,
-            y: y,
+            x: drawX,
+            y: drawY,
             size: config.fontSize,
             font: font,
             color: blackColor,
           });
-          console.log(`Число ${text} нарисовано в ячейке [${rowIndex},${colIndex}]`);
-        }
-      }
-    }
-
-    // Добавляем метку внизу карточки
-    this.drawCardLabel(page, x, y, config, font, cardNumber);
-    console.log('Метка карточки добавлена');
+              console.log(`Число ${text} нарисовано в ячейке [${rowIndex},${colIndex}]`);
   }
+}
 
-  drawDoubleBorder(page, x, y, width, height, outerBorderWidth, innerBorderWidth, spacing, color) {
-    console.log('Рисуем двойную рамку:', { x, y, width, height, outerBorderWidth, innerBorderWidth, spacing });
+// Добавляем метку внизу карточки
+this.drawCardLabel(page, x, y, config, font, cardNumber);
+console.log('Метка карточки добавлена');
+}
 
-    // Внешняя рамка
-    page.drawRectangle({
-      x: x,
-      y: y,
-      width: width,
-      height: height,
-      borderColor: color,
-      borderWidth: outerBorderWidth,
-    });
+drawDoubleBorder(page, x, y, width, height, outerBorderWidth, innerBorderWidth, spacing, color) {
+  console.log('Рисуем двойную рамку:', { x, y, width, height, outerBorderWidth, innerBorderWidth, spacing });
 
-    // Внутренняя рамка (с отступом на spacing + половина толщины внешней линии)
-    const innerX = x + spacing + outerBorderWidth / 2;
-    const innerY = y + spacing + outerBorderWidth / 2;
-    const innerWidth = width - 2 * (spacing + outerBorderWidth / 2);
-    const innerHeight = height - 2 * (spacing + outerBorderWidth / 2);
+  // Внешняя рамка
+  page.drawRectangle({
+    x: x,
+    y: y,
+    width: width,
+    height: height,
+    borderColor: color,
+    borderWidth: outerBorderWidth,
+  });
 
-    page.drawRectangle({
-      x: innerX,
-      y: innerY,
-      width: innerWidth,
-      height: innerHeight,
-      borderColor: color,
-      borderWidth: innerBorderWidth,
-    });
-  }
+  // Внутренняя рамка (с отступом на spacing + половина толщины внешней линии)
+  const innerX = x + spacing + outerBorderWidth / 2;
+  const innerY = y + spacing + outerBorderWidth / 2;
+  const innerWidth = width - 2 * (spacing + outerBorderWidth / 2);
+  const innerHeight = height - 2 * (spacing + outerBorderWidth / 2);
 
-  drawCardLabel(page, cardX, cardY, config, font, cardNumber) {
-    const blackColor = PDFLib.rgb(0, 0, 0);
+  page.drawRectangle({
+    x: innerX,
+    y: innerY,
+    width: innerWidth,
+    height: innerHeight,
+    borderColor: color,
+    borderWidth: innerBorderWidth,
+  });
+}
 
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+drawCardLabel(page, cardX, cardY, config, font, cardNumber) {
+  const blackColor = PDFLib.rgb(0, 0, 0);
 
-    const dateTimeStr = `${year}${month}${day}${hours}${minutes}${seconds}${milliseconds}`;
-    const numberStr = ` ${cardNumber}`;
+  const now = new Date();
+  const dateTimeStr = utils.formatDateTimeForLabel(now);
+  const numberStr = ` ${cardNumber}`;
 
-    const footerY = cardY + config.footerMargin;
+  // Вычисляем позицию для метки
+  const footerY = cardY - config.footerMargin; // отступ от рамки карточки
 
-    // Дата и время
-    const dateTimeTextWidth = font.widthOfTextAtSize(dateTimeStr, config.dateTimeFontSize);
-    const dateTimeX = cardX + (config.cardWidth - dateTimeTextWidth - 5) / 2;
-    page.drawText(dateTimeStr, {
-      x: dateTimeX,
-      y: footerY,
-      size: config.dateTimeFontSize,
-      font: font,
-      color: blackColor,
-    });
-    console.log('Дата и время метки нарисованы:', dateTimeStr);
+  // Дата и время
+  const dateTimeTextWidth = font.widthOfTextAtSize(dateTimeStr, config.dateTimeFontSize);
+  const dateTimeX = cardX + (config.cardWidth - dateTimeTextWidth - 5) / 2; // центрирование
+  page.drawText(dateTimeStr, {
+    x: dateTimeX,
+    y: footerY,
+    size: config.dateTimeFontSize,
+    font: font,
+    color: blackColor,
+  });
+  console.log('Дата и время метки нарисованы:', dateTimeStr);
 
-    // Номер карточки
-    const numberTextWidth = font.widthOfTextAtSize(numberStr, config.numberFontSize);
-    const numberX = dateTimeX + dateTimeTextWidth + 3; // Расстояние между датой и номером
-    page.drawText(numberStr, {
-      x: numberX,
-      y: footerY,
-      size: config.numberFontSize,
-      font: font,
-      color: blackColor,
-    });
-    console.log('Номер карточки метки нарисован:', cardNumber);
-  }
+  // Номер карточки
+  const numberTextWidth = font.widthOfTextAtSize(numberStr, config.numberFontSize);
+  const numberX = dateTimeX + dateTimeTextWidth + 3; // небольшой отступ между датой и номером
+  page.drawText(numberStr, {
+    x: numberX,
+    y: footerY,
+    size: config.numberFontSize,
+    font: font,
+    color: blackColor,
+  });
+  console.log('Номер карточки метки нарисован:', cardNumber);
+}
 
-  async saveAndDownloadPDF(pdfDoc) {
+async saveAndDownloadPDF(pdfDoc) {
+  try {
+    console.log('Начинаем сохранение PDF...');
+    const pdfBytes = await pdfDoc.save();
+    console.log('PDF сохранён, размер:', pdfBytes.length, 'байт');
+
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    let url;
     try {
-      console.log('Начинаем сохранение PDF...');
-      const pdfBytes = await pdfDoc.save();
-      console.log('PDF сохранён, размер:', pdfBytes.length, 'байт');
-
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      let url;
-      try {
-        url = URL.createObjectURL(blob);
-        console.log('Blob URL создан:', url);
-      } catch (urlError) {
-        console.error('Ошибка создания blob URL:', urlError);
-        alert('Не удалось создать ссылку для скачивания. Попробуйте обновить страницу.');
-        return;
-      }
-
-      // Создание ссылки для скачивания
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'loto_cards.pdf';
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      console.log('Ссылка для скачивания создана');
-
-      // Попытка скачать файл через клик
-      try {
-        link.click();
-        console.log('Клик по ссылке инициирован');
-      } catch (clickError) {
-        console.error('Ошибка при клике по ссылке:', clickError);
-      }
-
-      // Мониторинг скачивания
-      const checkInterval = 400;
-      let attempts = 0;
-      const maxAttempts = Math.floor(this.DOWNLOAD_TIMEOUT / checkInterval);
-
-      const monitorDownload = setInterval(() => {
-        attempts++;
-        console.log(`Попытка скачивания: ${attempts}/${maxAttempts}`);
-
-        if (attempts >= maxAttempts) {
-          clearInterval(monitorDownload);
-          console.warn('Таймаут скачивания, открываем PDF в новой вкладке');
-
-          try {
-            window.open(url, '_blank');
-          } catch (openError) {
-            console.error('Ошибка открытия в новой вкладке:', openError);
-            alert('Попробуйте открыть PDF вручную: нажмите на ссылку в новой вкладке.');
-          }
-        }
-      }, checkInterval);
-
-      // Очистка ресурсов
-      setTimeout(() => {
-        try {
-          URL.revokeObjectURL(url);
-          document.body.removeChild(link);
-          clearInterval(monitorDownload);
-          console.log('Ресурсы очищены');
-        } catch (cleanupError) {
-          console.error('Ошибка при очистке ресурсов:', cleanupError);
-        }
-      }, this.DOWNLOAD_TIMEOUT + this.CLEANUP_DELAY);
-    } catch (saveError) {
-      console.error('Ошибка сохранения PDF:', saveError);
-      alert('Произошла ошибка при сохранении PDF. Проверьте консоль (F12 → Console) для деталей.');
+      url = URL.createObjectURL(blob);
+      console.log('Blob URL создан:', url);
+    } catch (urlError) {
+      console.error('Ошибка создания blob URL:', urlError);
+      alert('Не удалось создать ссылку для скачивания. Попробуйте обновить страницу.');
+      return;
     }
+
+    // Создание ссылки для скачивания
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'loto_cards.pdf';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    console.log('Ссылка для скачивания создана');
+
+    // Попытка скачать файл через клик
+    try {
+      link.click();
+      console.log('Клик по ссылке инициирован');
+    } catch (clickError) {
+      console.error('Ошибка при клике по ссылке:', clickError);
+    }
+
+    // Мониторинг скачивания
+    const checkInterval = 400;
+    let attempts = 0;
+    const maxAttempts = Math.floor(this.DOWNLOAD_TIMEOUT / checkInterval);
+
+    const monitorDownload = setInterval(() => {
+      attempts++;
+      console.log(`Попытка скачивания: ${attempts}/${maxAttempts}`);
+
+      if (attempts >= maxAttempts) {
+        clearInterval(monitorDownload);
+        console.warn('Таймаут скачивания, открываем PDF в новой вкладке');
+
+        try {
+          window.open(url, '_blank');
+        } catch (openError) {
+          console.error('Ошибка открытия в новой вкладке:', openError);
+          alert('Попробуйте открыть PDF вручную: нажмите на ссылку в новой вкладке.');
+        }
+      }
+    }, checkInterval);
+
+    // Очистка ресурсов
+    setTimeout(() => {
+      try {
+        URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+        clearInterval(monitorDownload);
+        console.log('Ресурсы очищены');
+      } catch (cleanupError) {
+        console.error('Ошибка при очистке ресурсов:', cleanupError);
+      }
+    }, this.DOWNLOAD_TIMEOUT + this.CLEANUP_DELAY);
+  } catch (saveError) {
+    console.error('Ошибка сохранения PDF:', saveError);
+    alert('Произошла ошибка при сохранении PDF. Проверьте консоль (F12 → Console) для деталей.');
   }
+}
 }
 
 // Экспортируем класс для использования в других модулях
