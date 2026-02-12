@@ -1,6 +1,6 @@
 /**
  * Вспомогательные функции и утилиты для генератора карточек Русского Лотто
- * Версия: 1.1.0 (улучшенная валидация и обработка ошибок)
+ * Версия: 1.2.0 (улучшенная обработка ошибок, типизация и производительность)
  */
 
 /**
@@ -13,6 +13,9 @@
 function getRandomInt(min, max) {
   if (typeof min !== 'number' || typeof max !== 'number') {
     throw new Error('getRandomInt: min и max должны быть числами');
+  }
+  if (!isFinite(min) || !isFinite(max)) {
+    throw new Error('getRandomInt: min и max должны быть конечными числами');
   }
   if (min > max) {
     throw new Error('getRandomInt: min не может быть больше max');
@@ -31,6 +34,9 @@ function shuffleArray(array) {
   if (!Array.isArray(array)) {
     throw new Error('shuffleArray: аргумент должен быть массивом');
   }
+
+  // Возвращаем копию пустого массива сразу
+  if (array.length === 0) return [];
 
   const arr = [...array]; // Создаём копию массива
   for (let i = arr.length - 1; i > 0; i--) {
@@ -52,6 +58,13 @@ function isValidNumberInRange(value, min, max) {
     return {
       isValid: false,
       errorMessage: `Значение "${value}" не является числом`
+    };
+  }
+
+  if (!isFinite(value)) {
+    return {
+      isValid: false,
+      errorMessage: `Значение ${value} не является конечным числом`
     };
   }
 
@@ -93,8 +106,8 @@ function padNumber(number, length) {
   if (typeof number !== 'number' && typeof number !== 'string') {
     throw new Error('padNumber: number должен быть числом или строкой');
   }
-  if (typeof length !== 'number' || length < 0) {
-    throw new Error('padNumber: length должен быть неотрицательным числом');
+  if (typeof length !== 'number' || length < 0 || !Number.isInteger(length)) {
+    throw new Error('padNumber: length должен быть неотрицательным целым числом');
   }
 
   return String(number).padStart(length, '0');
@@ -104,7 +117,7 @@ function padNumber(number, length) {
  * Конвертирует десятые доли миллиметра в пункты (pt) для PDF
  * 1 мм = 2.83464567 pt, поэтому 1/10 мм = 0.283464567 pt
  * @param {number} tenthsOfMillimeters — размер в десятых долях мм
- * @returns {number} размер в пунктах (pt), округлённый до целого
+ * @returns {number} размер в пунктах (pt), округлённый до 2 знаков после запятой
  * @throws {Error} если входное значение не число
  */
 function convertTenthsMmToPt(tenthsOfMillimeters) {
@@ -116,8 +129,12 @@ function convertTenthsMmToPt(tenthsOfMillimeters) {
     throw new Error('convertTenthsMmToPt: значение является NaN');
   }
 
+  if (!isFinite(tenthsOfMillimeters)) {
+    throw new Error('convertTenthsMmToPt: значение должно быть конечным числом');
+  }
+
   const MM_TO_PT_FACTOR = 0.283464567;
-  return Math.round(tenthsOfMillimeters * MM_TO_PT_FACTOR);
+  return Number((tenthsOfMillimeters * MM_TO_PT_FACTOR).toFixed(2));
 }
 
 /**
@@ -183,21 +200,43 @@ function validateConfig(config) {
     },
     {
       field: 'numberFontSize',
-      condition: isValidNumberInRange(config.numberFontSize, 8, 36),
-      message: 'Размер шрифта номера карточки должен быть от 8 до 36 pt'
-    }
-  ];
+          condition: isValidNumberInRange(config.numberFontSize, 8, 36),
+    message: 'Размер шрифта номера карточки должен быть от 8 до 36 pt'
+  }
+];
 
-  validations.forEach(validation => {
-    if (!validation.condition.isValid) {
-      errors.push(validation.message);
-    }
-  });
+validations.forEach(validation => {
+  if (!validation.condition.isValid) {
+    errors.push(validation.message);
+  }
+});
 
-  return {
-    isValid: errors.length === 0,
-    errors: errors
-  };
+// Проверка обязательных строковых полей
+if (!config.fontFamily || typeof config.fontFamily !== 'string' || config.fontFamily.trim() === '') {
+  errors.push('Шрифт для карточек обязателен');
+} else {
+  const supportedFonts = ['Helvetica', 'HelveticaBold', 'Helvetica-Oblique', 'Helvetica-BoldOblique'];
+  if (!supportedFonts.includes(config.fontFamily)) {
+    errors.push(`Поддерживаются только шрифты: ${supportedFonts.join(', ')}`);
+  }
+}
+
+if (!config.cardType || typeof config.cardType !== 'string' || config.cardType.trim() === '') {
+  errors.push('Тип карточки обязателен');
+}
+
+// Проверка логических полей
+if (config.includeHeader !== undefined && typeof config.includeHeader !== 'boolean') {
+  errors.push('Параметр includeHeader должен быть булевым значением');
+}
+if (config.includeFooter !== undefined && typeof config.includeFooter !== 'boolean') {
+  errors.push('Параметр includeFooter должен быть булевым значением');
+}
+
+return {
+  isValid: errors.length === 0,
+  errors: errors
+};
 }
 
 /**
@@ -289,6 +328,9 @@ function delay(ms) {
   if (ms < 0) {
     throw new Error('delay: время задержки не может быть отрицательным');
   }
+  if (!Number.isFinite(ms)) {
+    throw new Error('delay: время задержки должно быть конечным числом');
+  }
 
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -301,8 +343,17 @@ function delay(ms) {
  * @returns {number[]} массив чисел в диапазоне [start, end] с шагом step
  */
 function createRange(start, end, step = 1) {
+  if (typeof start !== 'number' || typeof end !== 'number') {
+    throw new Error('createRange: start и end должны быть числами');
+  }
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    throw new Error('createRange: start и end должны быть конечными числами');
+  }
   if (step <= 0) {
     throw new Error('createRange: шаг должен быть положительным числом');
+  }
+  if (!Number.isFinite(step)) {
+    throw new Error('createRange: шаг должен быть конечным числом');
   }
 
   const range = [];
@@ -321,7 +372,10 @@ function isEmpty(value) {
   if (value === null || value === undefined) return true;
   if (typeof value === 'string') return value.trim().length === 0;
   if (Array.isArray(value)) return value.length === 0;
-  if (typeof value === 'object') return Object.keys(value).length === 0;
+  if (typeof value === 'object' && value !== null) {
+    if (value instanceof Date) return false; // Даты не считаем пустыми
+    return Object.keys(value).length === 0;
+  }
   return false;
 }
 
@@ -335,6 +389,10 @@ function deepCopy(obj) {
     return obj;
   }
 
+  if (obj instanceof Date) {
+    return new Date(obj.getTime());
+  }
+
   if (Array.isArray(obj)) {
     return obj.map(item => deepCopy(item));
   }
@@ -346,6 +404,150 @@ function deepCopy(obj) {
     }
   }
   return copy;
+}
+
+/**
+ * Форматирует размер в удобочитаемый вид (например, 1500 десятых мм → «150 мм»)
+ * @param {number} tenthsOfMillimeters — размер в десятых долях мм
+ * @returns {string} отформатированная строка с единицами измерения
+ * @throws {Error} если входное значение не число
+ */
+function formatSize(tenthsOfMillimeters) {
+  if (typeof tenthsOfMillimeters !== 'number') {
+    throw new Error('formatSize: аргумент должен быть числом');
+  }
+  if (isNaN(tenthsOfMillimeters)) {
+    throw new Error('formatSize: значение является NaN');
+  }
+  if (!isFinite(tenthsOfMillimeters)) {
+    throw new Error('formatSize: значение должно быть конечным числом');
+  }
+
+  const mm = tenthsOfMillimeters / 10;
+  return `${mm}\u202Fмм`; // \u202F — узкий неразрывный пробел
+}
+
+/**
+ * Нормализует конфигурацию, приводя все значения к корректным типам и заполняя значения по умолчанию
+ * @param {Object} config — исходная конфигурация
+ * @returns {Object} нормализованная конфигурация
+ */
+function normalizeConfig(config = {}) {
+  const defaults = {
+    pageCount: 1,
+    fontSize: 24,
+    outerBorder: 2,
+    innerBorder: 1,
+    borderSpacing: 5,
+    cardWidthTenths: 1580,
+    cardHeightTenths: 740,
+    verticalSpacing: 20,
+    dateTimeFontSize: 10,
+    numberFontSize: 20,
+    fontFamily: 'Helvetica',
+    cardType: 'standard',
+    includeHeader: true,
+    includeFooter: true,
+    footerMargin: 0
+  };
+
+  const normalized = { ...defaults };
+
+  // Безопасное копирование и преобразование значений
+  Object.keys(defaults).forEach(key => {
+    if (config[key] !== undefined) {
+      switch (key) {
+        case 'pageCount':
+        case 'fontSize':
+        case 'outerBorder':
+        case 'innerBorder':
+        case 'borderSpacing':
+        case 'cardWidthTenths':
+        case 'cardHeightTenths':
+        case 'verticalSpacing':
+        case 'dateTimeFontSize':
+        case 'numberFontSize':
+        case 'footerMargin':
+          normalized[key] = safeToNumber(config[key], defaults[key]);
+          break;
+        case 'fontFamily':
+        case 'cardType':
+          normalized[key] = typeof config[key] === 'string' ? config[key].trim() : defaults[key];
+          break;
+        case 'includeHeader':
+        case 'includeFooter':
+          normalized[key] = Boolean(config[key]);
+          break;
+        default:
+          normalized[key] = config[key];
+      }
+    }
+  });
+
+  return normalized;
+}
+
+/**
+ * Проверяет, является ли объект валидной конфигурацией (после нормализации)
+ * @param {Object} config — конфигурация для проверки
+ * @returns {{isValid: boolean, errors: string[], normalizedConfig: Object}} результат проверки и нормализованная конфигурация
+ */
+function validateAndNormalizeConfig(config) {
+  // Сначала нормализуем
+  const normalizedConfig = normalizeConfig(config);
+
+  // Затем валидируем
+  const validationResult = validateConfig(normalizedConfig);
+
+  return {
+    isValid: validationResult.isValid,
+    errors: validationResult.errors,
+    normalizedConfig: normalizedConfig
+  };
+}
+
+/**
+ * Создаёт объект с информацией о текущей сессии генерации
+ * @param {Object} config — конфигурация генерации
+ * @returns {Object} объект сессии
+ */
+function createGenerationSession(config) {
+  return {
+    sessionId: generateUniqueId(),
+    timestamp: Date.now(),
+    config: deepCopy(config),
+    status: 'pending',
+    progress: 0,
+    generatedPages: 0,
+    totalPages: config.pageCount || 1
+  };
+}
+
+/**
+ * Обновляет прогресс сессии генерации
+ * @param {Object} session — объект сессии
+ * @param {number} progress — прогресс в процентах (0–100)
+ * @param {number} generatedPages — количество сгенерированных страниц
+ */
+function updateGenerationProgress(session, progress, generatedPages) {
+  session.progress = Math.min(100, Math.max(0, progress));
+  session.generatedPages = generatedPages;
+  session.lastUpdate = Date.now();
+}
+
+/**
+ * Завершает сессию генерации
+ * @param {Object} session — объект сессии
+ * @param {'success'|'error'} status — статус завершения
+ * @param {string} [message] — дополнительное сообщение
+ */
+function completeGenerationSession(session, status, message) {
+  session.status = status;
+  session.completionTime = Date.now();
+  session.duration = session.completionTime - session.timestamp;
+  if (message) {
+    session.message = message;
+  }
 }
 
 // Экспорт всех функций для использования в других модулях
@@ -363,7 +565,13 @@ if (typeof module !== 'undefined' && module.exports) {
     delay,
     createRange,
     isEmpty,
-    deepCopy
+    deepCopy,
+    formatSize,
+    normalizeConfig,
+    validateAndNormalizeConfig,
+    createGenerationSession,
+    updateGenerationProgress,
+    completeGenerationSession
   };
 } else {
   window.utils = {
@@ -379,6 +587,12 @@ if (typeof module !== 'undefined' && module.exports) {
     delay,
     createRange,
     isEmpty,
-    deepCopy
+    deepCopy,
+    formatSize,
+    normalizeConfig,
+    validateAndNormalizeConfig,
+    createGenerationSession,
+    updateGenerationProgress,
+    completeGenerationSession
   };
 }
