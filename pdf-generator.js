@@ -1,6 +1,6 @@
 /**
  * Модуль генерации PDF для Русского Лотто
- * Версия: 1.0.1 (исправление ошибок инициализации)
+ * Версия: 1.1.0 (исправление ошибок инициализации и поддержки Яндекс Браузера)
  */
 
 // Убеждаемся, что PDFLib загружен глобально
@@ -21,6 +21,7 @@ class PDFGenerator {
 
   /**
    * Проверка поддержки браузером необходимых API
+   * @returns {boolean} true, если все API поддерживаются
    */
   checkBrowserSupport() {
     const checks = [
@@ -35,6 +36,7 @@ class PDFGenerator {
       throw new Error(`Browser lacks required APIs: ${failedChecks.map(c => c.name).join(', ')}`);
     }
     console.log('PDFGenerator: все необходимые API поддерживаются');
+    return true;
   }
 
   /**
@@ -48,12 +50,12 @@ class PDFGenerator {
       const config = this.getConfig();
       console.log('PDFGenerator: конфигурация получена:', config);
 
-      const { PDFDocument, rgb } = PDFLib; // Распаковка необходимых частей PDFLib
+      const { PDFDocument, rgb, StandardFonts } = PDFLib;
       const pdfDoc = await PDFDocument.create();
       console.log('PDFGenerator: создан новый PDF документ');
 
       // Загружаем шрифт
-      const font = await this.loadFont(pdfDoc, config.fontFamily);
+      const font = await this.loadFont(pdfDoc, config.fontFamily, StandardFonts);
       console.log(`PDFGenerator: шрифт загружен: ${config.fontFamily}`);
 
       let globalCardCounter = 1;
@@ -68,7 +70,7 @@ class PDFGenerator {
           const card = this.generateLotoCard();
           console.log(`PDFGenerator: генерируем карточку №${globalCardCounter}`);
 
-          const { x, y } = this.calculateCardPosition(i, page);
+          const { x, y } = this.calculateCardPosition(i, page, config);
           this.drawCard(page, card, x, y, config, font, globalCardCounter);
           globalCardCounter++;
         }
@@ -86,11 +88,12 @@ class PDFGenerator {
 
   /**
    * Загрузка шрифта в PDF документ
-   * @param {PDFDocument} pdfDoc - экземпляр PDF документа
-   * @param {string} fontFamily - имя шрифта (например, 'Helvetica')
+   * @param {PDFDocument} pdfDoc — экземпляр PDF документа
+   * @param {string} fontFamily — имя шрифта (например, 'Helvetica')
+   * @param {Object} StandardFonts — объект стандартных шрифтов PDFLib
    * @returns {Promise<PDFLib.Font>} загруженный шрифт
    */
-  async loadFont(pdfDoc, fontFamily) {
+  async loadFont(pdfDoc, fontFamily, StandardFonts) {
     try {
       const font = await pdfDoc.embedFont(StandardFonts[fontFamily]);
       return font;
@@ -119,142 +122,192 @@ class PDFGenerator {
   }
 
   /**
-   * Рассчёт позиции карточки на странице
-   * @param {number} cardIndex - индекс карточки (0-3)
-   * @param {PDFLib.Page} page - объект страницы PDF
+   * Расчёт позиции карточки на странице с учётом конфигурации
+   * @param {number} cardIndex — индекс карточки (0–3)
+   * @param {PDFLib.Page} page — объект страницы PDF
+   * @param {Object} config — конфигурация генерации
    * @returns {{x: number, y: number}} координаты левого верхнего угла карточки
    */
-  calculateCardPosition(cardIndex, page) {
-    const cardWidth = 140;
-    const cardHeight = 180;
+  calculateCardPosition(cardIndex, page, config) {
+    // Конвертируем десятые доли мм в пункты
+    const cardWidth = this.convertTenthsMmToPt(config.cardWidthTenths);
+    const cardHeight = this.convertTenthsMmToPt(config.cardHeightTenths);
+
     const margin = 20;
 
     const col = cardIndex % 2; // 0 или 1 (два столбца)
     const row = Math.floor(cardIndex / 2); // 0 или 1 (две строки)
 
-    const x = margin + col * (cardWidth + margin);
-    const y = page.getHeight() - margin - (row + 1) * (cardHeight + margin);
+    const x = margin + col * (cardWidth + config.verticalSpacing);
+    const y = page.getHeight() - margin - (row + 1) * (cardHeight + config.verticalSpacing);
 
+    console.log(`PDFGenerator: позиция карточки ${cardIndex}: x=${x}, y=${y}`);
     return { x, y };
   }
 
   /**
-   * Рисование одной карточки лото
-   * @param {PDFLib.Page} page - страница PDF
-   * @param {number[]} cardNumbers - массив чисел карточки
-   * @param {number} x - X-координата левого верхнего угла
-   * @param {number} y - Y-координата левого верхнего угла
-   * @param {Object} config - конфигурация генерации
-   * @param {PDFLib.Font} font - загруженный шрифт
-   * @param {number} cardNumber - порядковый номер карточки
+   * Рисование одной карточки лото с учётом конфигурации
+   * @param {PDFLib.Page} page — страница PDF
+   * @param {number[]} cardNumbers — массив чисел карточки
+   * @param {number} x — X‑координата левого верхнего угла
+   * @param {number} y — Y‑координата левого верхнего угла
+   * @param {Object} config — конфигурация генерации
+   * @param {PDFLib.Font} font — загруженный шрифт
+   * @param {number} cardNumber — порядковый номер карточки
    */
   drawCard(page, cardNumbers, x, y, config, font, cardNumber) {
-    // Рисуем рамку карточки
+    // Конвертируем размеры из десятых долей мм в пункты
+    const cardWidth = this.convertTenthsMmToPt(config.cardWidthTenths);
+    const cardHeight = this.convertTenthsMmToPt(config.cardHeightTenths);
+
+    // Рисуем внешнюю рамку
     page.drawRectangle({
       x: x,
       y: y,
-      width: 140,
-      height: 180,
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 2
+      width: cardWidth,
+      height: cardHeight,
+      borderColor: PDFLib.rgb(0, 0, 0),
+      borderWidth: config.outerBorder
     });
+
+    // Рисуем внутреннюю рамку (двойная рамка)
+    page.drawRectangle({
+      x: x + config.borderSpacing,
+      y: y + config.borderSpacing,
+      width: cardWidth - 2 * config.borderSpacing,
+      height: cardHeight - 2 * config.borderSpacing,
+      borderColor: PDFLib.rgb(0, 0, 0),
+      borderWidth: config.innerBorder
+    });
+
+    // Рассчитываем сетку для чисел (3 столбца, 2 строки)
+    const cellWidth = cardWidth / 3;
+    const cellHeight = cardHeight / 2;
 
     // Рисуем числа карточки
     cardNumbers.forEach((num, i) => {
-      const textX = x + 10 + (i % 3) * 40;
-      const textY = y + 160 - Math.floor(i / 3) * 50;
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+            const textX = x + col * cellWidth + cellWidth / 2;
+      const textY = y + (1 - row) * cellHeight - 10; // Смещение для центрирования текста
+
+
       page.drawText(num.toString(), {
         x: textX,
         y: textY,
         size: config.fontSize,
         font: font,
-        color: rgb(0, 0, 0)
+        color: PDFLib.rgb(0, 0, 0),
+        textAlign: PDFLib.TextAlignment.Center
       });
     });
 
-    // Рисуем номер карточки в углу
+    // Рисуем номер карточки в правом верхнем углу
     page.drawText(cardNumber.toString(), {
-      x: x + 125,
-      y: y + 165,
-      size: 12,
+      x: x + cardWidth - config.footerMargin - 15,
+      y: y + cardHeight - config.footerMargin - 5,
+      size: config.numberFontSize,
       font: font,
-      color: rgb(0, 0, 0)
+      color: PDFLib.rgb(0.5, 0.5, 0.5) // Серый цвет для номера карточки
+    });
+
+    // Добавляем дату и время генерации в нижний левый угол карточки
+    const now = new Date();
+    const dateTimeStr = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+    page.drawText(dateTimeStr, {
+      x: x + config.footerMargin,
+      y: y + config.footerMargin,
+      size: config.dateTimeFontSize,
+      font: font,
+      color: PDFLib.rgb(0.7, 0.7, 0.7) // Светло‑серый цвет
     });
   }
 
   /**
+   * Конвертирует десятые доли миллиметра в пункты (1 мм = 2.83464567 pt)
+   * @param {number} tenthsMm — размер в десятых долях мм
+   * @returns {number} размер в пунктах
+   */
+  convertTenthsMmToPt(tenthsMm) {
+    return (tenthsMm / 10) * 2.83464567;
+  }
+
+  /**
    * Сохранение PDF и запуск скачивания
-   * @param {PDFDocument} pdfDoc - готовый PDF документ
+   * @param {PDFDocument} pdfDoc — готовый PDF документ
    */
   async saveAndDownloadPDF(pdfDoc) {
-  console.log('PDFGenerator: сохраняем PDF...');
+    console.log('PDFGenerator: сохраняем PDF...');
 
-  const pdfBytes = await pdfDoc.save();
-  console.log(`PDFGenerator: PDF сохранён, размер: ${pdfBytes.length} байт`);
+    const pdfBytes = await pdfDoc.save();
+    console.log(`PDFGenerator: PDF сохранён, размер: ${pdfBytes.length} байт`);
 
-  try {
-    // Создаём Blob из байтов PDF
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    console.log('PDFGenerator: Blob создан');
+    try {
+      // Создаём Blob из байтов PDF
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      console.log('PDFGenerator: Blob создан');
 
-    // Генерируем URL для скачивания
-    const url = URL.createObjectURL(blob);
-    console.log('PDFGenerator: создан URL для скачивания');
+      // Генерируем URL для скачивания
+      const url = URL.createObjectURL(blob);
+      console.log('PDFGenerator: создан URL для скачивания');
 
-    // Создаём скрытый элемент <a> для запуска скачивания
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `russian-lotto-cards-${new Date().toISOString().replace(/[:T.]/g, '-')}.pdf`);
-    document.body.appendChild(link);
+      // Создаём скрытый элемент <a> для запуска скачивания
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute(
+        'download',
+        `russian-lotto-cards-${new Date().toISOString().replace(/[:T.]/g, '-')}.pdf`
+      );
+      document.body.appendChild(link);
 
-    // Эмулируем клик по ссылке для запуска скачивания
-    link.click();
+      // Эмулируем клик по ссылке для запуска скачивания
+      link.click();
 
-    // Очищаем URL и удаляем элемент через таймаут (для безопасности)
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-      document.body.removeChild(link);
-      console.log('PDFGenerator: URL отозван, элемент удалён');
-    }, this.DOWNLOAD_TIMEOUT);
+      // Очищаем URL и удаляем элемент через таймаут (для безопасности)
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+        console.log('PDFGenerator: URL отозван, элемент удалён');
+      }, this.DOWNLOAD_TIMEOUT + this.CLEANUP_DELAY);
 
-    console.log('PDFGenerator: PDF успешно отправлен на скачивание');
-  } catch (saveError) {
-    console.error('PDFGenerator: ошибка при сохранении/скачивании PDF:', saveError);
-    throw new Error('Failed to download PDF: ' + saveError.message);
-  }
-}
-
-/**
- * Получение конфигурации из DOM (параметры формы)
- * @returns {Object} объект с настройками генерации PDF
- */
-getConfig() {
-  const config = {
-    pageCount: parseInt(document.getElementById('pageCount').value, 10) || 6,
-    fontSize: parseInt(document.getElementById('fontSize').value, 10) || 30,
-    outerBorder: parseInt(document.getElementById('outerBorder').value, 10) || 4,
-    innerBorder: parseInt(document.getElementById('innerBorder').value, 10) || 2,
-    borderSpacing: parseInt(document.getElementById('borderSpacing').value, 10) || 3,
-    cardWidthTenths: parseInt(document.getElementById('cardWidthTenths').value, 10) || 1965,
-    cardHeightTenths: parseInt(document.getElementById('cardHeightTenths').value, 10) || 657,
-    verticalSpacing: parseInt(document.getElementById('verticalSpacing').value, 10) || 20,
-    dateTimeFontSize: parseInt(document.getElementById('dateTimeFontSize').value, 10) || 3,
-    numberFontSize: parseInt(document.getElementById('numberFontSize').value, 10) || 4,
-    footerMargin: parseInt(document.getElementById('footerMargin').value, 10) || 5,
-    fontFamily: document.getElementById('fontFamily').value || 'Helvetica'
-  };
-
-  // Валидация минимальных значений
-  Object.keys(config).forEach(key => {
-    if (typeof config[key] === 'number' && config[key] < 1) {
-      console.warn(`PDFGenerator: некорректное значение ${key}, установлено минимальное`);
-      config[key] = 1;
+      console.log('PDFGenerator: PDF успешно отправлен на скачивание');
+    } catch (saveError) {
+      console.error('PDFGenerator: ошибка при сохранении/скачивании PDF:', saveError);
+      throw new Error('Failed to download PDF: ' + saveError.message);
     }
-  });
+  }
 
-  console.log('PDFGenerator: конфигурация собрана:', config);
-  return config;
-}
+  /**
+   * Получение конфигурации из DOM (параметры формы)
+   * @returns {Object} объект с настройками генерации PDF
+   */
+  getConfig() {
+    const config = {
+      pageCount: parseInt(document.getElementById('pageCount').value, 10) || 6,
+      fontSize: parseInt(document.getElementById('fontSize').value, 10) || 30,
+      outerBorder: parseInt(document.getElementById('outerBorder').value, 10) || 4,
+      innerBorder: parseInt(document.getElementById('innerBorder').value, 10) || 2,
+      borderSpacing: parseInt(document.getElementById('borderSpacing').value, 10) || 3,
+      cardWidthTenths: parseInt(document.getElementById('cardWidthTenths').value, 10) || 1965,
+      cardHeightTenths: parseInt(document.getElementById('cardHeightTenths').value, 10) || 657,
+      verticalSpacing: parseInt(document.getElementById('verticalSpacing').value, 10) || 20,
+      dateTimeFontSize: parseInt(document.getElementById('dateTimeFontSize').value, 10) || 3,
+      numberFontSize: parseInt(document.getElementById('numberFontSize').value, 10) || 4,
+      footerMargin: parseInt(document.getElementById('footerMargin').value, 10) || 5,
+      fontFamily: document.getElementById('fontFamily').value || 'Helvetica'
+    };
+
+    // Валидация минимальных значений
+    Object.keys(config).forEach(key => {
+      if (typeof config[key] === 'number' && config[key] < 1) {
+        console.warn(`PDFGenerator: некорректное значение ${key}, установлено минимальное`);
+        config[key] = 1;
+      }
+    });
+
+    console.log('PDFGenerator: конфигурация собрана:', config);
+    return config;
+  }
 } // конец класса PDFGenerator
 
 // Экспортируем класс в глобальную область (для script.js)
