@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Генератор карточек для Русского Лотто</title>
   <link rel="stylesheet" href="style.css">
+  <!-- Загружаем PDF-Lib перед нашими скриптами -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
 <body>
@@ -81,6 +82,7 @@
 
   <div id="status"></div>
 
+  <!-- Подключаем наши скрипты ПОСЛЕ PDF-Lib -->
   <script src="utils.js"></script>
   <script src="pdf-generator.js"></script>
   <script src="script.js"></script>
