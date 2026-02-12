@@ -2,24 +2,27 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Генератор карточек для Русского Лотто</title>
   <link rel="stylesheet" href="style.css">
   <!-- Загружаем PDF-Lib перед нашими скриптами -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <!-- Фавикон для избежания 404 ошибок -->
+  <link rel="icon" type="image/x-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjMDA3YmRmIi8+Cjx0ZXh0IHg9IjE2IiB5PSIxNiIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXdlaWdodD0ibm9ybWFsIiBmaWxsPSIjZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0iY2VudHJhbCIgZm9udC1zaXplPSI4Ij5MT1RUTzwvdGV4dD4KPC9zdmc+Cg==">
 </head>
 <body>
   <h1>Генератор карточек для Русского Лотто</h1>
 
-  <div id="controls">
+  <div id="controls" class="controls">
     <div class="control-group">
       <label for="pageCount">Количество страниц кратно 3м (на странице по 4 карточки):</label>
-      <input type="number" id="pageCount" min="1" value="6">
+      <input type="number" id="pageCount" min="1" max="100" value="6" required>
+      <small>Допустимые значения: 1–100</small>
     </div>
 
     <div class="control-group">
       <label for="fontFamily">Шрифт чисел:</label>
-      <select id="fontFamily">
+      <select id="fontFamily" required>
         <option value="Helvetica" selected>Helvetica (обычный)</option>
         <option value="HelveticaBold">Helvetica Bold (жирный)</option>
         <option value="Helvetica-Oblique">Helvetica Oblique (курсив)</option>
@@ -29,58 +32,68 @@
 
     <div class="control-group">
       <label for="fontSize">Размер шрифта чисел (pt):</label>
-      <input type="number" id="fontSize" min="16" max="36" value="30">
+      <input type="number" id="fontSize" min="16" max="36" value="30" required>
+      <small>Допустимые значения: 16–36 pt</small>
     </div>
 
     <div class="control-group">
       <label for="outerBorder">Толщина внешней линии двойной рамки (px):</label>
-      <input type="number" id="outerBorder" min="1" max="10" value="4">
+      <input type="number" id="outerBorder" min="1" max="10" value="4" required>
+      <small>Допустимые значения: 1–10 px</small>
     </div>
 
     <div class="control-group">
       <label for="innerBorder">Толщина внутренней линии двойной рамки (px):</label>
-      <input type="number" id="innerBorder" min="1" max="5" value="2">
+      <input type="number" id="innerBorder" min="1" max="5" value="2" required>
+      <small>Допустимые значения: 1–5 px</small>
     </div>
 
     <div class="control-group">
       <label for="borderSpacing">Расстояние между линиями рамки (px):</label>
-      <input type="number" id="borderSpacing" min="0" max="20" value="3">
+      <input type="number" id="borderSpacing" min="0" max="20" value="3" required>
+      <small>Допустимые значения: 0–20 px</small>
     </div>
 
     <div class="control-group">
       <label for="cardWidthTenths">Ширина карточки (десятые мм) стандарт 2200:</label>
-      <input type="number" id="cardWidthTenths" min="1060" max="2120" value="1965">
+      <input type="number" id="cardWidthTenths" min="1060" max="2120" value="1965" required>
+      <small>Допустимые значения: 1060–2120 десятых мм</small>
     </div>
 
     <div class="control-group">
       <label for="cardHeightTenths">Высота карточки (десятые мм) стандарт 800:</label>
-      <input type="number" id="cardHeightTenths" min="350" max="1060" value="657">
+      <input type="number" id="cardHeightTenths" min="350" max="1060" value="657" required>
+      <small>Допустимые значения: 350–1060 десятых мм</small>
     </div>
 
     <div class="control-group">
       <label for="verticalSpacing">Расстояние между карточками (pt):</label>
-      <input type="number" id="verticalSpacing" min="7" max="150" value="20">
+      <input type="number" id="verticalSpacing" min="7" max="150" value="20" required>
+      <small>Допустимые значения: 7–150 pt</small>
     </div>
 
     <div class="control-group">
       <label for="dateTimeFontSize">Размер шрифта даты‑времени (pt):</label>
-      <input type="number" id="dateTimeFontSize" min="1" max="20" value="3">
+      <input type="number" id="dateTimeFontSize" min="1" max="20" value="3" required>
+      <small>Допустимые значения: 1–20 pt</small>
     </div>
 
     <div class="control-group">
       <label for="numberFontSize">Размер шрифта номера (pt):</label>
-      <input type="number" id="numberFontSize" min="1" max="20" value="4">
+      <input type="number" id="numberFontSize" min="8" max="36" value="4" required>
+      <small>Допустимые значения: 8–36 pt</small>
     </div>
 
     <div class="control-group">
       <label for="footerMargin">Расстояние метки от рамки (pt):</label>
-      <input type="number" id="footerMargin" min="-50" max="50" value="5">
+      <input type="number" id="footerMargin" min="-50" max="50" value="5" required>
+      <small>Допустимые значения: −50–50 pt</small>
     </div>
 
-    <button id="generateBtn">Сгенерировать PDF</button>
+    <button id="generateBtn" type="button">Сгенерировать PDF</button>
   </div>
 
-  <div id="status"></div>
+  <div id="status" class="status-message"></div>
 
   <!-- Подключаем наши скрипты ПОСЛЕ PDF-Lib -->
   <script src="utils.js"></script>
