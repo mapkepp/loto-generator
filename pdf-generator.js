@@ -1,384 +1,95 @@
 /**
- * Модуль генерации PDF для Русского Лотто
+ * Основной скрипт приложения для генератора карточек Русского Лотто
  */
-class PDFGenerator {
-  constructor() {
-    this.DOWNLOAD_TIMEOUT = 2000; // мс — время мониторинга скачивания
-    this.CLEANUP_DELAY = 1000;  // мс — задержка на очистку
-    console.log('PDFGenerator инициализирован');
+
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('script.js: DOM полностью загружен, инициализируем приложение...');
+
+  // Проверяем доступность PDFGenerator после загрузки всех скриптов
+  if (typeof PDFGenerator === 'undefined') {
+    console.error('script.js: PDFGenerator не определён. Проверьте порядок загрузки скриптов.');
+    alert('Ошибка инициализации приложения: PDFGenerator не загружен. Проверьте консоль (F12 → Console) для деталей.');
+    return;
   }
 
-  async generatePDF() {
-    console.log('Начало генерации PDF...');
+  // Инициализируем генератор PDF
+  const pdfGenerator = new PDFGenerator();
+  console.log('script.js: PDFGenerator успешно инициализирован');
 
-    if (!this.checkBrowserSupport()) {
-      console.error('Браузер не поддерживает необходимые API');
-      return false;
+  // Получаем элементы интерфейса
+  const generateBtn = document.getElementById('generateBtn');
+  const statusDiv = document.getElementById('status');
+
+  if (!generateBtn) {
+    console.error('script.js: Кнопка генерации не найдена в DOM');
+    return;
+  }
+
+  if (!statusDiv) {
+    console.warn('script.js: Элемент статуса не найден в DOM, некоторые уведомления могут не отображаться');
+  }
+
+  // Функция обновления статуса
+  function updateStatus(message, isError = false) {
+    if (statusDiv) {
+      statusDiv.textContent = message;
+      statusDiv.style.color = isError ? 'red' : 'green';
+      statusDiv.style.fontWeight = 'bold';
+      console.log(`script.js: Статус обновлён: ${message}`);
     }
+  }
+
+  // Обработчик клика по кнопке генерации
+  generateBtn.addEventListener('click', async function() {
+    console.log('script.js: Нажата кнопка генерации PDF');
+
+    // Сбрасываем предыдущий статус
+    updateStatus('Начинаем генерацию PDF...');
 
     try {
-      const config = this.getConfig();
-      console.log('Конфигурация получена:', config);
+      // Запускаем генерацию PDF
+      const success = await pdfGenerator.generatePDF();
 
-      const { PDFDocument } = PDFLib;
-      const pdfDoc = await PDFDocument.create();
-      console.log('Создан новый PDF документ');
-
-      // Загружаем шрифт
-      const font = await this.loadFont(pdfDoc, config.fontFamily);
-      console.log('Шрифт загружен:', config.fontFamily);
-
-      let globalCardCounter = 1;
-
-      for (let pageIndex = 0; pageIndex < config.pageCount; pageIndex++) {
-        console.log(`Создаём страницу ${pageIndex + 1} из ${config.pageCount}`);
-        const page = pdfDoc.addPage([595, 842]); // A4
-
-        const cardsPerColumn = this.calculateCardsPerPage(config);
-        console.log(`Карточек на странице: ${cardsPerColumn}`);
-
-        for (let row = 0; row < cardsPerColumn; row++) {
-          const card = this.generateLotoCard();
-          console.log(`Генерируем карточку №${globalCardCounter}`);
-
-          const { cardX, cardY } = this.calculateCardPosition(page, row, config);
-          this.drawCard(page, card, cardX, cardY, config, font, globalCardCounter);
-          globalCardCounter++;
-        }
-      }
-
-      await this.saveAndDownloadPDF(pdfDoc);
-      return true;
-    } catch (error) {
-      console.error('Ошибка при генерации PDF:', error);
-      alert('Произошла ошибка при генерации PDF. Проверьте консоль (F12 → Console) для деталей.');
-      return false;
-    }
-  }
-
-  checkBrowserSupport() {
-    const checks = [
-      { name: 'Blob API', condition: typeof Blob !== 'undefined' },
-      { name: 'URL API', condition: typeof URL !== 'undefined' && typeof URL.createObjectURL !== 'undefined' },
-      { name: 'PDFLib', condition: typeof PDFLib !== 'undefined' }
-    ];
-
-        const failedChecks = checks.filter(check => !check.condition);
-    if (failedChecks.length > 0) {
-      failedChecks.forEach(check => console.error(`${check.name} не поддерживается`));
-      return false;
-    }
-    console.log('Все необходимые API поддерживаются');
-    return true;
-  }
-
-  getConfig() {
-    const config = {
-      pageCount: utils.safeToNumber(document.getElementById('pageCount').value, 6),
-      fontSize: utils.safeToNumber(document.getElementById('fontSize').value, 30),
-      outerBorder: utils.safeToNumber(document.getElementById('outerBorder').value, 4),
-      innerBorder: utils.safeToNumber(document.getElementById('innerBorder').value, 2),
-      borderSpacing: utils.safeToNumber(document.getElementById('borderSpacing').value, 3),
-      cardWidth: utils.convertTenthsMmToPt(
-        utils.safeToNumber(document.getElementById('cardWidthTenths').value, 1965)
-      ),
-      cardHeight: utils.convertTenthsMmToPt(
-        utils.safeToNumber(document.getElementById('cardHeightTenths').value, 657)
-      ),
-      verticalSpacing: utils.safeToNumber(document.getElementById('verticalSpacing').value, 20),
-      dateTimeFontSize: utils.safeToNumber(document.getElementById('dateTimeFontSize').value, 3),
-      numberFontSize: utils.safeToNumber(document.getElementById('numberFontSize').value, 4),
-      footerMargin: utils.safeToNumber(document.getElementById('footerMargin').value, 5),
-      fontFamily: document.getElementById('fontFamily').value
-    };
-
-    console.log('Конфигурация получена и обработана:', config);
-    return config;
-  }
-
-  async loadFont(pdfDoc, fontFamily) {
-    console.log(`Загрузка шрифта: ${fontFamily}`);
-    try {
-      switch (fontFamily) {
-        case 'Helvetica':
-          return await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-        case 'HelveticaBold':
-          return await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
-        case 'Helvetica-Oblique':
-          return await pdfDoc.embedFont(PDFLib.StandardFonts['Helvetica-Oblique']);
-        case 'Helvetica-BoldOblique':
-          return await pdfDoc.embedFont(PDFLib.StandardFonts['Helvetica-BoldOblique']);
-        default:
-          console.warn(`Шрифт ${fontFamily} не найден, используем Helvetica по умолчанию`);
-          return await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки шрифта:', error);
-      throw error;
-    }
-  }
-
-  calculateCardsPerPage(config) {
-    const pageHeight = 842; // A4 высота в pt
-    const availableHeight = pageHeight - 0; // отступы сверху/снизу
-    const cardsPerPage = Math.floor(availableHeight / (config.cardHeight + config.verticalSpacing));
-    console.log(`Карточек на странице рассчитано: ${cardsPerPage}`);
-    return cardsPerPage;
-  }
-
-  calculateCardPosition(page, rowIndex, config) {
-    const pageHeight = page.getSize().height;
-    const cardY = pageHeight - (rowIndex + 1) * (config.cardHeight + config.verticalSpacing) - 0;
-    const cardX = (page.getSize().width - config.cardWidth) / 2;
-    console.log(`Позиция карточки [${rowIndex}]: x=${cardX}, y=${cardY}`);
-    return { cardX, cardY };
-  }
-
-  generateLotoCard() {
-    console.log('Генерация новой карточки лото...');
-    const card = [Array(9).fill(0), Array(9).fill(0), Array(9).fill(0)];
-    const columnRanges = [
-      [1, 9], [10, 19], [20, 29], [30, 39], [40, 49],
-      [50, 59], [60, 69], [70, 79], [80, 90]
-    ];
-
-    const generateValidCard = () => {
-      const tempCard = [Array(9).fill(0), Array(9).fill(0), Array(9).fill(0)];
-      for (let col = 0; col < 9; col++) {
-        const [min, max] = columnRanges[col];
-        const numbersInColumn = Array.from(
-          { length: max - min + 1 },
-          (_, i) => i + min
-        );
-        const numCount = Math.floor(Math.random() * 2) + 1;
-        const selectedNumbers = [];
-        for (let i = 0; i < numCount; i++) {
-          const randomIndex = Math.floor(Math.random() * numbersInColumn.length);
-          const num = numbersInColumn[randomIndex];
-          selectedNumbers.push(num);
-          numbersInColumn.splice(randomIndex, 1);
-        }
-        for (const num of selectedNumbers) {
-          let row;
-          do {
-            row = Math.floor(Math.random() * 3);
-          } while (tempCard[row][col] !== 0);
-          tempCard[row][col] = num;
-        }
-      }
-      const isValid = tempCard.every(row => row.filter(n => n !== 0).length === 5);
-      if (isValid) {
-        console.log('Карточка сгенерирована успешно');
-        return tempCard;
+      if (success) {
+        updateStatus('PDF успешно сгенерирован и отправлен на скачивание!');
+        console.log('script.js: Генерация PDF завершена успешно');
       } else {
-        console.warn('Сгенерированная карточка невалидна, повторяем попытку...');
-        return generateValidCard();
+        updateStatus('Ошибка при генерации PDF. Проверьте консоль для деталей.', true);
+        console.error('script.js: Генерация PDF не удалась');
       }
-    };
-    return generateValidCard();
-  }
-
-  drawCard(page, card, x, y, config, font, cardNumber) {
-    console.log(`Начало отрисовки карточки №${cardNumber} в позиции (${x}, ${y})`);
-    const blackColor = PDFLib.rgb(0, 0, 0);
-    const cellWidth = config.cardWidth / 9;
-    const cellHeight = config.cardHeight / 3;
-
-    // Рисуем двойную рамку карточки
-    this.drawDoubleBorder(page, x, y, config.cardWidth, config.cardHeight,
-      config.outerBorder, config.innerBorder, config.borderSpacing, blackColor);
-
-    // Рисуем ячейки и числа
-    for (let rowIndex = 0; rowIndex < 3; rowIndex++) {
-      for (let colIndex = 0; colIndex < 9; colIndex++) {
-        const num = card[rowIndex][colIndex];
-
-        // Центр ячейки
-        const xCenter = x + colIndex * cellWidth + cellWidth / 2;
-        const yCenter = y + (2 - rowIndex) * cellHeight + cellHeight / 2;
-
-        // Внутренняя сетка
-        page.drawRectangle({
-          x: x + colIndex * cellWidth,
-          y: y + (2 - rowIndex) * cellHeight,
-          width: cellWidth,
-          height: cellHeight,
-          borderColor: blackColor,
-          borderWidth: 0.5,
-        });
-
-        if (num !== 0) {
-          const text = num.toString();
-          const textWidth = font.widthOfTextAtSize(text, config.fontSize);
-          const drawX = xCenter - textWidth / 2;
-
-          // Адаптивный вертикальный сдвиг
-          let k;
-          if (config.fontSize <= 22) {
-            k = 0.35;
-          } else if (config.fontSize <= 28) {
-            k = 0.35 - (config.fontSize - 22) * (0.05 / 6);
-          } else {
-            k = 0.30 - (config.fontSize - 28) * (0.05 / 8);
-          }
-          const drawY = yCenter - config.fontSize * k;
-
-          page.drawText(text, {
-            x: drawX,
-            y: drawY,
-            size: config.fontSize,
-            font: font,
-            color: blackColor,
-          });
-              console.log(`Число ${text} нарисовано в ячейке [${rowIndex},${colIndex}]`);
-  }
-}
-
-// Добавляем метку внизу карточки
-this.drawCardLabel(page, x, y, config, font, cardNumber);
-console.log('Метка карточки добавлена');
-}
-
-drawDoubleBorder(page, x, y, width, height, outerBorderWidth, innerBorderWidth, spacing, color) {
-  console.log('Рисуем двойную рамку:', { x, y, width, height, outerBorderWidth, innerBorderWidth, spacing });
-
-  // Внешняя рамка
-  page.drawRectangle({
-    x: x,
-    y: y,
-    width: width,
-    height: height,
-    borderColor: color,
-    borderWidth: outerBorderWidth,
+    } catch (error) {
+      updateStatus('Критическая ошибка при генерации PDF.', true);
+      console.error('script.js: Критическая ошибка в обработчике генерации:', error);
+    }
   });
 
-  // Внутренняя рамка (с отступом на spacing + половина толщины внешней линии)
-  const innerX = x + spacing + outerBorderWidth / 2;
-  const innerY = y + spacing + outerBorderWidth / 2;
-  const innerWidth = width - 2 * (spacing + outerBorderWidth / 2);
-  const innerHeight = height - 2 * (spacing + outerBorderWidth / 2);
-
-  page.drawRectangle({
-    x: innerX,
-    y: innerY,
-    width: innerWidth,
-    height: innerHeight,
-    borderColor: color,
-    borderWidth: innerBorderWidth,
-  });
-}
-
-drawCardLabel(page, cardX, cardY, config, font, cardNumber) {
-  const blackColor = PDFLib.rgb(0, 0, 0);
-
-  const now = new Date();
-  const dateTimeStr = utils.formatDateTimeForLabel(now);
-  const numberStr = ` ${cardNumber}`;
-
-  // Вычисляем позицию для метки
-  const footerY = cardY - config.footerMargin; // отступ от рамки карточки
-
-  // Дата и время
-  const dateTimeTextWidth = font.widthOfTextAtSize(dateTimeStr, config.dateTimeFontSize);
-  const dateTimeX = cardX + (config.cardWidth - dateTimeTextWidth - 5) / 2; // центрирование
-  page.drawText(dateTimeStr, {
-    x: dateTimeX,
-    y: footerY,
-    size: config.dateTimeFontSize,
-    font: font,
-    color: blackColor,
-  });
-  console.log('Дата и время метки нарисованы:', dateTimeStr);
-
-  // Номер карточки
-  const numberTextWidth = font.widthOfTextAtSize(numberStr, config.numberFontSize);
-  const numberX = dateTimeX + dateTimeTextWidth + 3; // небольшой отступ между датой и номером
-  page.drawText(numberStr, {
-    x: numberX,
-    y: footerY,
-    size: config.numberFontSize,
-    font: font,
-    color: blackColor,
-  });
-  console.log('Номер карточки метки нарисован:', cardNumber);
-}
-
-async saveAndDownloadPDF(pdfDoc) {
+  // Дополнительная валидация конфигурации при старте
+  console.log('script.js: Выполняем начальную валидацию конфигурации...');
   try {
-    console.log('Начинаем сохранение PDF...');
-    const pdfBytes = await pdfDoc.save();
-    console.log('PDF сохранён, размер:', pdfBytes.length, 'байт');
+    const config = pdfGenerator.getConfig();
+    const validationResult = utils.validateConfig(config);
 
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    let url;
-    try {
-      url = URL.createObjectURL(blob);
-      console.log('Blob URL создан:', url);
-    } catch (urlError) {
-      console.error('Ошибка создания blob URL:', urlError);
-      alert('Не удалось создать ссылку для скачивания. Попробуйте обновить страницу.');
-      return;
+    if (!validationResult.isValid) {
+      console.warn('script.js: Обнаружены проблемы в конфигурации:', validationResult.errors);
+      validationResult.errors.forEach(error => {
+        console.warn('script.js: Ошибка конфигурации:', error);
+      });
+      updateStatus(`Предупреждение: проблемы с конфигурацией. Проверьте настройки.`, true);
+    } else {
+      console.log('script.js: Начальная валидация конфигурации пройдена успешно');
     }
-
-    // Создание ссылки для скачивания
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'loto_cards.pdf';
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    console.log('Ссылка для скачивания создана');
-
-    // Попытка скачать файл через клик
-    try {
-      link.click();
-      console.log('Клик по ссылке инициирован');
-    } catch (clickError) {
-      console.error('Ошибка при клике по ссылке:', clickError);
-    }
-
-    // Мониторинг скачивания
-    const checkInterval = 400;
-    let attempts = 0;
-    const maxAttempts = Math.floor(this.DOWNLOAD_TIMEOUT / checkInterval);
-
-    const monitorDownload = setInterval(() => {
-      attempts++;
-      console.log(`Попытка скачивания: ${attempts}/${maxAttempts}`);
-
-      if (attempts >= maxAttempts) {
-        clearInterval(monitorDownload);
-        console.warn('Таймаут скачивания, открываем PDF в новой вкладке');
-
-        try {
-          window.open(url, '_blank');
-        } catch (openError) {
-          console.error('Ошибка открытия в новой вкладке:', openError);
-          alert('Попробуйте открыть PDF вручную: нажмите на ссылку в новой вкладке.');
-        }
-      }
-    }, checkInterval);
-
-    // Очистка ресурсов
-    setTimeout(() => {
-      try {
-        URL.revokeObjectURL(url);
-        document.body.removeChild(link);
-        clearInterval(monitorDownload);
-        console.log('Ресурсы очищены');
-      } catch (cleanupError) {
-        console.error('Ошибка при очистке ресурсов:', cleanupError);
-      }
-    }, this.DOWNLOAD_TIMEOUT + this.CLEANUP_DELAY);
-  } catch (saveError) {
-    console.error('Ошибка сохранения PDF:', saveError);
-    alert('Произошла ошибка при сохранении PDF. Проверьте консоль (F12 → Console) для деталей.');
+  } catch (validationError) {
+    console.error('script.js: Ошибка при валидации конфигурации:', validationError);
   }
-}
-}
 
-// Экспортируем класс для использования в других модулях
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = PDFGenerator;
-} else {
-  window.PDFGenerator = PDFGenerator;
-}
+  console.log('script.js: Приложение инициализировано и готово к работе');
+});
+
+// Глобальный обработчик ошибок для отладки
+window.addEventListener('error', function(event) {
+  console.error('script.js: Глобальная ошибка JavaScript:', event.error);
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+  console.error('script.js: Необработанное промис-отклонение:', event.reason);
+});
