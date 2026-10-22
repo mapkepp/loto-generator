@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Уникальные карточки Русского лото на А4 — PDF без повторов</title>
+  <meta name="description" content="Генератор уникальных карточек русского лото 3×9 на А4: ни одной одинаковой карточки в PDF, равномерное распределение чисел 1–90. Бесплатно, без регистрации.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://mapkepp.github.io/loto-generator/unique/">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:site_name" content="Генератор карточек Русского лото">
+  <meta property="og:title" content="Уникальные карточки Русского лото на А4 — PDF без повторов">
+  <meta property="og:description" content="Генератор уникальных карточек русского лото 3×9 на А4: ни одной одинаковой карточки в PDF, равномерное распределение чисел 1–90. Бесплатно, без регистрации.">
+  <meta property="og:url" content="https://mapkepp.github.io/loto-generator/unique/">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Уникальные карточки Русского лото на А4 — PDF без повторов">
+  <meta name="twitter:description" content="Генератор уникальных карточек русского лото 3×9 на А4: ни одной одинаковой карточки в PDF, равномерное распределение чисел 1–90. Бесплатно, без регистрации.">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Генератор уникальных карточек Русского лото на А4",
+    "url": "https://mapkepp.github.io/loto-generator/unique/",
+    "description": "Генератор уникальных карточек русского лото 3×9 на А4: ни одной одинаковой карточки в PDF, равномерное распределение чисел 1–90. Бесплатно, без регистрации.",
+    "inLanguage": "ru",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Any",
+    "isAccessibleForFree": true,
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "RUB"
+    }
+  }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      margin: 0;
+    }
+    #controls {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 600px;
+      justify-content: flex-start;
+    }
+    label {
+      font-weight: bold;
+      white-space: nowrap;
+      min-width: 200px;
+      text-align: left;
+    }
+    input[type="number"] {
+      padding: 5px;
+      width: 80px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <nav style="max-width:760px;margin:0 auto 18px;text-align:left;font-size:14px;"><a href="../" style="color:#245a72;">← Обычный генератор карточек без контроля повторов</a></nav>
+  <h1>Уникальные карточки Русского лото на А4</h1>
+  <p style="max-width:760px; margin:0 auto 24px; line-height:1.55; color:#333;"><strong>Отдельная версия с проверкой каждого набора.</strong> В одном PDF все карточки разные, а числа распределяются максимально ровно: в каждой шестёрке карточек все числа от 1 до 90 встречаются ровно по одному разу. Настраивайте печать на А4 и скачивайте бесплатно, без регистрации.</p>
+
+  <div id="controls">
+    <div class="control-group">
+      <label for="pageCount">Количество страниц А4 (число карточек на листе зависит от размера):</label>
+      <input type="number" id="pageCount" min="1" max="200" value="6" data-name="Количество страниц">
+    </div>
+
+    <div class="control-group">
+      <label for="fontFamily">Шрифт чисел:</label>
+      <select id="fontFamily">
+        <option value="Helvetica" selected>Helvetica (обычный)</option>
+        <option value="HelveticaBold">Helvetica Bold (жирный)</option>
+        <option value="Helvetica-Oblique">Helvetica Oblique (курсив)</option>
+        <option value="Helvetica-BoldOblique">Helvetica Bold Oblique</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="fontSize">Размер шрифта чисел (pt):</label>
+      <input type="number" id="fontSize" min="16" max="36" value="30" data-name="Размер шрифта">
+    </div>
+
+    <div class="control-group">
+      <label for="outerBorder">Толщина внешней рамки (px):</label>
+      <input type="number" id="outerBorder" min="1" max="10" value="4" data-name="Внешняя рамка">
+    </div>
+
+    <div class="control-group">
+      <label for="innerBorder">Толщина внутренних линий (px):</label>
+      <input type="number" id="innerBorder" min="1" max="5" value="2" data-name="Внутренние линии">
+    </div>
+
+    <div class="control-group">
+      <label for="cardWidthTenths">Ширина карточки (десятые мм) стандарт 2200:</label>
+      <input type="number" id="cardWidthTenths" min="1060" max="2070" value="1965" data-name="Ширина карточки (десятые мм)">
+    </div>
+
+    <div class="control-group">
+      <label for="cardHeightTenths">Высота карточки (десятые мм) стандарт 800:</label>
+      <input type="number" id="cardHeightTenths" min="350" max="1060" value="657" data-name="Высота карточки (десятые мм)">
+    </div>
+
+    <div class="control-group">
+      <label for="verticalSpacing">Расстояние между карточками (pt):</label>
+      <input type="number" id="verticalSpacing" min="7" max="150" value="20" data-name="Расстояние между карточками">
+    </div>
+
+    <div class="control-group">
+      <label for="dateTimeFontSize">Размер шрифта даты‑времени (pt):</label>
+      <input type="number" id="dateTimeFontSize" min="1" max="20" value="4" data-name="Размер даты и времени">
+    </div>
+
+    <div class="control-group">
+      <label for="numberFontSize">Размер шрифта номера (pt):</label>
+      <input type="number" id="numberFontSize" min="1" max="20" value="6" data-name="Размер номера карточки">
+    </div>
+
+    <div class="control-group">
+      <label for="footerMargin">Расстояние метки от рамки (pt):</label>
+      <input type="number" id="footerMargin" min="0" max="30" value="5" data-name="Отступ нижней метки">
+    </div>
+
+    <button id="generateBtn" type="button">Сгенерировать уникальный PDF</button>
+    <p id="unique-status" role="status" aria-live="polite" style="max-width:650px;line-height:1.55;font-size:14px;margin:8px auto 0;color:#23543b;">Готов к созданию набора без одинаковых карточек.</p>
+    <div id="unique-download" aria-live="polite"></div>
+    <aside style="max-width:650px;margin:5px auto 0;padding:14px 16px;box-sizing:border-box;text-align:left;line-height:1.55;font-size:14px;background:#eff8f1;border-left:3px solid #2f7652;border-radius:0 7px 7px 0;">
+      <strong>Без повторяющихся карточек в одном PDF.</strong> При генерации каждая карточка проверяется на совпадения. Числа используются равномерно: на каждые шесть карточек приходится полный комплект 1–90 ровно по одному разу.
+      <details style="margin-top:9px;"><summary style="cursor:pointer;font-weight:600;">Как работает уникальность и баланс чисел?</summary>
+        <p style="margin:7px 0 0;">Карточка содержит 15 разных чисел: 3 строки по 5 и 9 числовых столбцов с правильными диапазонами. Внутри одного PDF одинаковые карточки не допускаются, а частота появления каждого числа по всему файлу различается максимум на один раз. Числа неизбежно повторяются между разными шестёрками карточек, но не повторяется сама карточка. При новом запуске создаётся новый набор; совпадения с PDF предыдущих запусков возможны, потому что общая история не хранится. Чтобы повторить тот же набор, сохраните PDF.</p>
+      </details>
+    </aside>
+  </div>
+
+  <script src="./unique-engine.js" defer></script>
+  <script src="./unique-app.js" defer></script>
+  <!-- На первый экран не влияет: простой пример карточки для посетителей и поиска по изображениям. -->
+  <figure id="card-example" style="max-width:760px; margin:28px auto 12px; padding:0 12px; box-sizing:border-box;">
+    <img src="../sample-loto-card.svg" width="880" height="348" loading="lazy" decoding="async"
+      alt="Пример карточки для настольного русского лото: 15 чисел от 1 до 90, таблица 3 на 9, для печати на листе А4"
+      style="display:block; width:100%; height:auto; border:0;">
+    <figcaption style="font-size:14px; line-height:1.5; color:#555; margin-top:6px;">Пример сетки классического лото 3×9. На новой странице готовый PDF проверяется на отсутствие одинаковых карточек.</figcaption>
+  </figure>
+  <!-- Информация для посетителей и поисковых систем: не участвует в генерации PDF. -->
+  <section id="how-to-print" aria-labelledby="how-to-print-title" style="max-width:760px;margin:38px auto 22px;text-align:left;line-height:1.65;">
+    <h2 id="how-to-print-title">Как создать уникальные карточки для русского лото</h2>
+    <ol style="padding-left:25px;">
+      <li>Выберите количество страниц, размеры карточек, шрифты и расстояния между карточками.</li>
+      <li>Нажмите «Сгенерировать уникальный PDF». Программа сначала готовит и проверяет весь набор, затем формирует PDF.</li>
+      <li>Сохраните PDF, распечатайте на А4 с масштабом 100% и проверьте один пробный лист.</li>
+    </ol>
+    <h2>Как достигается равномерное распределение чисел?</h2>
+    <p>Карточки формируются группами по шесть. В каждой такой группе все 90 чисел встречаются ровно один раз, без повторов между карточками группы. Поэтому при создании полного набора из 6, 12, 18 и так далее карточек каждый номер от 1 до 90 используется одинаковое количество раз. Для неполной последней шестёрки отличие в частоте номеров не превышает одного раза.</p>
+    <p>Каждая карточка содержит 3 строки и 9 столбцов, по 5 разных чисел в каждой строке; числа идут по положенным диапазонам и сверху вниз возрастают в столбце. При записи PDF все одинаковые карточки внутри файла исключаются.</p>
+    <h2>Частые вопросы</h2>
+    <details style="margin:10px 0;"><summary style="cursor:pointer;font-weight:bold;">Что именно гарантируется?</summary><p>В пределах одного скачиваемого PDF карточки не повторяются, а распределение чисел 1–90 проверено. Если контроль не проходит, программа сообщает об ошибке вместо выдачи некорректного PDF.</p></details>
+    <details style="margin:10px 0;"><summary style="cursor:pointer;font-weight:bold;">Могут ли одинаковые числа встречаться на разных карточках?</summary><p>Да, если карточек больше шести. Каждая шестёрка использует все 90 чисел один раз, но между шестёрками числа повторяются — это нормально. Полностью одинаковых карточек в рамках одного PDF не будет.</p></details>
+    <details style="margin:10px 0;"><summary style="cursor:pointer;font-weight:bold;">Можно ли восстановить набор позднее?</summary><p>Созданный PDF нужно сохранить: точное воспроизведение прошлого набора через повторный запуск не предусмотрено. Проверка уникальности распространяется на текущий PDF, а не на все файлы, созданные ранее.</p></details>
+    <details style="margin:10px 0;"><summary style="cursor:pointer;font-weight:bold;">Чем эта версия отличается от обычной?</summary><p>В обычной версии комбинации выбираются случайно без общего контроля дубликатов. Здесь используется генерация сбалансированными шестёрками, проверка правильности сетки, отсутствие повторяющихся карточек в одном PDF и ограничение объёма, защищающее от слишком тяжёлой генерации. <a href="../">Вернуться к обычному генератору</a>.</p></details>
+  </section>
+  <!-- Добровольная поддержка проекта: не влияет на доступность функций. -->
+  <section id="donations" aria-labelledby="donations-heading" style="max-width:680px; margin:48px auto 16px; padding:24px 18px; border:1px solid #ddd; border-radius:12px; background:#fafafa; box-sizing:border-box;">
+    <h2 id="donations-heading" style="margin:0 0 12px;">Поддержать проект</h2>
+    <p style="margin:0 0 20px; line-height:1.5;">Если генератор карточек для Русского лото оказался полезным, вы можете по желанию поддержать его развитие.</p>
+    <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-bottom:20px;">
+      <a href="https://yoomoney.ru/fundraise/1L2T11QBAHF.261022" target="_blank" rel="noopener noreferrer" style="display:inline-block; padding:11px 16px; border:1px solid #7b42b3; border-radius:8px; color:#632d98; text-decoration:none; font-weight:bold;">Пожертвовать через ЮMoney</a>
+      <a href="https://t.tb.ru/pm_short/7Ixu10XDRWa" target="_blank" rel="noopener noreferrer" style="display:inline-block; padding:11px 16px; border:1px solid #b99b00; border-radius:8px; color:#473b00; text-decoration:none; font-weight:bold;">Пожертвовать через Т-Банк</a>
+    </div>
+    <p style="font-size:14px; line-height:1.6; margin:0; color:#444;">
+      <strong>Важно:</strong> Донаты — это добровольные пожертвования. Они не открывают никакого дополнительного функционала и не дают преимуществ.
+      <strong>Весь функционал доступен сразу всем полностью бесплатно, независимо от пожертвований.</strong>
+    </p>
+  </section>
+  <!-- Гостевая книга: загружается только после раскрытия и не влияет на генератор PDF. -->
+  <section id="feedback-section" aria-label="Отзывы и предложения" style="max-width:680px; margin:16px auto 36px; border:1px solid #ddd; border-radius:12px; box-sizing:border-box; text-align:left;">
+    <details id="feedback-details">
+      <summary style="padding:18px 20px; cursor:pointer; font-size:19px; font-weight:bold; line-height:1.4;">💬 Отзывы и предложения</summary>
+      <div style="padding:0 20px 20px;">
+        <p style="line-height:1.5; margin:0 0 12px;">Здесь можно написать отзыв, рассказать об ошибке или предложить улучшение.</p>
+        <p style="font-size:14px; line-height:1.5; margin:0 0 14px; color:#245a38; font-weight:bold;">Без регистрации и аккаунта GitHub. Имя можно не указывать.</p>
+        <p style="color:#555; font-size:13px; line-height:1.5; margin:0 0 16px;">Отзывы общедоступны и хранятся у стороннего сервиса HTML Comment Box. Не размещайте пароли, контакты и другие личные данные.</p>
+        <div id="HCB_comment_box" style="font-size:14px; min-height:32px; overflow-wrap:anywhere;" role="region" aria-label="Гостевая книга">Откройте раздел, чтобы загрузить форму и отзывы.</div>
+      </div>
+    </details>
+  </section>
+  <script>
+    // Изолированный от генератора ленивый виджет стороннего сервиса.
+    (function () {
+      'use strict';
+      const details = document.getElementById('feedback-details');
+      const box = document.getElementById('HCB_comment_box');
+      if (!details || !box) return;
+      let initialized = false;
+      details.addEventListener('toggle', function () {
+        if (!details.open || initialized) return;
+        initialized = true;
+        box.textContent = 'Загружаем гостевую книгу…';
+        window.hcb_user = {
+          PAGE: 'https://mapkepp.github.io/loto-generator/unique/',
+          comments_header: 'Отзывы посетителей',
+          name_label: 'Ваше имя (необязательно)',
+          content_label: 'Ваш отзыв или предложение',
+          submit: 'Отправить отзыв',
+          no_comments_msg: 'Отзывов пока нет. Оставьте первый!',
+          add: 'Написать отзыв',
+          again: 'Написать ещё',
+          said: 'написал(а):',
+          anonymous: 'Анонимный посетитель',
+          msg_thankyou: 'Спасибо за отзыв!',
+          msg_approval: 'Отзыв будет опубликован после одобрения.',
+          msg_approval_required: 'Спасибо! Ваш отзыв ожидает проверки.',
+          err_comment_empty: 'Введите текст отзыва.',
+          err_too_frequent: 'Подождите немного перед повторной отправкой.',
+          err_spam: 'Сообщение распознано как спам.',
+          MAX_CHARS: 2000,
+          RELATIVE_DATES: false
+        };
+        const sheet = document.createElement('link');
+        sheet.rel = 'stylesheet';
+        sheet.href = 'https://www.htmlcommentbox.com/static/skins/bootstrap/twitter-bootstrap.css?v=0';
+        document.head.appendChild(sheet);
+        const script = document.createElement('script');
+        script.id = 'hcb';
+        script.async = true;
+        script.src = 'https://www.htmlcommentbox.com/jread?page=' +
+          encodeURIComponent(window.hcb_user.PAGE) + '&opts=16862&num=10';
+        script.onerror = function () {
+          box.textContent = 'Не получилось загрузить отзывы. Проверьте соединение или попробуйте позже.';
+        };
+        document.head.appendChild(script);
+      });
+    })();
+  </script>
+</body>
+</html>
+
+
+
