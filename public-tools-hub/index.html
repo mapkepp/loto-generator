@@ -57,7 +57,7 @@ details{border:1px solid var(--border);padding:13px;border-radius:12px;margin-to
 <p>Поддерживаются официальные методы Яндекс API; каждый пользователь отвечает за правомерность доступа к своим устройствам. Не публикуйте токены в комментариях, скриншотах, ссылках и репозиториях.</p>
 <p><a href="https://yandex.ru/dev/dialogs/smart-home/doc/ru/concepts/platform-protocol" target="_blank" rel="noopener noreferrer">Документация API Яндекса ↗</a></p></section>
 <section id="support" class="support"><h2>💜 Добровольно поддержать автора</h2><p>Донаты — это добровольные пожертвования. Они не открывают никакого дополнительного функционала и не дают преимуществ. Весь функционал доступен сразу всем полностью бесплатно, независимо от пожертвований.</p>
-<button id="donateBtn" class="btn" type="button">Поддержать проект</button><p id="donateMsg" role="status" aria-live="polite" style="margin-bottom:0;font-size:.88rem">Реквизиты ещё не опубликованы. Кнопка не принимает платежи.</p></section>
+<a id="donateBtn" class="btn" href="https://t.tb.ru/pm_short/7Ixu10XDRWa" target="_blank" rel="noopener noreferrer">Пожертвовать через Т-Банк ↗</a><p style="margin-bottom:0;font-size:.88rem">Переход на внешнюю страницу пожертвований. Использование всех инструментов бесплатно независимо от поддержки.</p></section>
 <footer><div class="footerline"><span>© 2026 Mapkepp Tools — независимый проект</span><a href="https://github.com/mapkepp/loto-generator/tree/main/public-tools-hub" target="_blank" rel="noopener noreferrer">Исходный код</a><a href="https://github.com/mapkepp/loto-generator/issues" target="_blank" rel="noopener noreferrer">Сообщить об ошибке</a></div><p>Первый выпуск: Smart Home Shortcut Studio. Следующие инструменты можно публиковать в этом каталоге, сохраняя бесплатный доступ.</p></footer></div>
 <script>
 (function(){
@@ -66,7 +66,6 @@ const E=id=>document.getElementById(id);
 const F=['title','target','targetId','capability','brightness','vpn','consent'];
 const API='https://api.iot.yandex.net/v1.0';
 const SIGN='https://sign.shortcuty.app/api/v1/sign';
-const DONATION_LINK=''; // Configure only after verifying recipient and legal/payment terms.
 const xmlEsc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 const uuid=()=>{if(crypto&&crypto.randomUUID)return crypto.randomUUID().toUpperCase();return 'XXXXXXXX-XXXX-4XXX-YXXX-XXXXXXXXXXXX'.replace(/[XY]/g,c=>{const n=Math.floor(Math.random()*16);return (c==='X'?n:((n&3)|8)).toString(16).toUpperCase();});};
 const tt=(v,attach)=>({WFSerializationType:'WFTextTokenString',Value:Object.assign({string:v},attach?{attachmentsByRange:attach}:{})});
@@ -159,7 +158,6 @@ E('sign').addEventListener('click',()=>{
 });
 for(const id of F)E(id).addEventListener('input',update);
 for(const id of ['target','capability'])E(id).addEventListener('change',update);
-E('donateBtn').addEventListener('click',()=>{if(DONATION_LINK){window.open(DONATION_LINK,'_blank','noopener,noreferrer');}else{E('donateMsg').textContent='Платёжная ссылка пока не указана. Никакие данные карты сайт не запрашивает.';}});
 update();
 })();
 </script></body></html>
