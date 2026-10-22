@@ -20,7 +20,7 @@ Use only devices and accounts you are authorized to control. No affiliation with
 API docs: https://yandex.ru/dev/dialogs/smart-home/doc/ru/concepts/platform-protocol
 
 ## Donations
-All functionality is free and identical for everyone. The support button is a **placeholder** until the owner configures a verified donation URL at `DONATION_LINK` in `index.html`. This site does not accept payments, process cards or promise benefits in return for gifts. Tax and payment processing treatment depends on the facts and applicable law; merely labeling a payment a donation does not make it non-taxable.
+All functionality is free and identical for everyone. Visitors can voluntarily support the project through the [T-Bank donation link](https://t.tb.ru/pm_short/7Ixu10XDRWa). The website itself does not process payments or bank card details and donations do not unlock functions, services, or priorities. The link opens a third-party payment page; actual payment completion has not been independently verified. Tax and payment treatment depends on facts and law; labeling a payment a donation does not automatically make it non-taxable.
 
 ## Publish in a separate GitHub repository
 This directory is currently **staged under mapkepp/loto-generator** because the connected GitHub integration cannot create repositories. Intended permanent repository: `mapkepp/mapkepp-tools`.
@@ -39,4 +39,4 @@ No user's local computer is needed for the staged version.
 - XML plist generation, true/false, integer number, ID and OAuth-token absence: PASS.
 - Apple AEA1 signer integration tested on scenario and VPN/non-VPN variants: PASS using **synthetic** IDs only.
 - Real iPhone iOS 26.6.2 import, VPN reconnection, device control, Safari cross-origin form downloads: **NOT_TESTED**.
-- New separate repository and functioning donation payment link: **NOT_DONE**, requires account-level creation/payment link.
+- Separate repository: **NOT_DONE**. T-Bank donation URL: **CONFIGURED** in the public tools page; external payment processing: **NOT_TESTED**.
