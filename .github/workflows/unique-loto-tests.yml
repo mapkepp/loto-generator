@@ -1,0 +1,28 @@
+name: Unique loto generator regression
+on:
+  push:
+    paths:
+      - 'unique/**'
+      - '.github/workflows/unique-loto-tests.yml'
+  pull_request:
+    paths:
+      - 'unique/**'
+      - '.github/workflows/unique-loto-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Verify cards and balance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Regression checks
+        run: node unique/unique-engine.test.js
