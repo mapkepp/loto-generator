@@ -7,4 +7,8 @@
       <image:loc>https://mapkepp.github.io/loto-generator/sample-loto-card.svg</image:loc>
     </image:image>
   </url>
+  <url>
+    <loc>https://mapkepp.github.io/loto-generator/unique/</loc>
+    <lastmod>2026-10-22</lastmod>
+  </url>
 </urlset>
